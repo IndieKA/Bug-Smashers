@@ -1,0 +1,147 @@
+/*****************************************************************************************
+ * NOTE: If you went through the pipe and you lost, that is because you accidentally hit a pipe without noticing. Trick of the eye, sadly. 
+  ********************************************************
+ * Lava Flap (In Progress)
+ * COPYRIGHT 1developer 2015. Do not plagiarize. 
+ ********************************************************
+ * Lava Flap is a game that is extremely similar to Flappy Bird, but with a lava-like theme, and with much less code. Although this game is not that great and as more realistic as Kevin23's Flappy Bird, this goes to show that most games can be reduced to a short amount of code. The physics in this game are not very formattable. Whenever you fall off the screen, you apparantly teleport to the homescreen, and there are many glitches in the code that cause this. 
+ * --
+ * However, one thing I did notice about this program is that many people have been accusing me of copying or stealing other people's ideas. First of all, I didn't know that you had that idea to make a game just like Lava Flap. I was bored one day and decided to make this, so you don't have much proof that I "stole" your idea.
+ * 
+ * Secondly, I didn't copy this program. @MichealMoynihan, the master of CS physics (in my personal opinion) designed a game similar to this. I modified his version up and made it different. 
+ * 
+ * NOTE: I spent almost half an hour just trying to make the code cleaner. 
+ * 
+ * Votes Earned:
+ * 5 = Check
+ * 10 = Check
+ * 15 = Check
+ * 20 = Come On!
+ ********************************************************
+*/
+var gameState = "Intro";
+//TEXT VARS
+textFont(createFont("Calibri"));
+//FLAPPY BALL AND PIPE FUNCTION
+var flappyBall = function(){
+    this.y = 200;
+    this.yvel = 0;
+    this.s = 0;
+    this.draw = function() {
+        fill(255, 255, 0);
+        image(getImage("creatures/Winston"),100,this.y,30,30);
+    };
+    this.move = function(){
+        if(mouseIsPressed){
+            this.yvel=-3;
+        }else{
+            this.yvel+=0.25;
+        }
+        this.y+=this.yvel;
+    };
+    this.die = function(p){
+        for(var i in p){
+            if((this.y-15 < p[i].y || this.y+15 > p[i].y+p[i].s) && 55 < p[i].x && 115 > p[i].x){
+                noLoop();
+            }
+        }
+        if(this.y > 385){
+            noLoop();
+        }
+    };
+};
+var pipeObstacle = function(x){
+    this.y = floor(random(50, 250));
+    this.x = x;
+    this.s = 100;
+    this.s2 = 1;
+    this.draw = function() {
+        noStroke();
+        fill(255, 0, 0);
+        rect(this.x, 0, 30, this.y-20);
+        rect(this.x-5, this.y-20, 40, 20);
+        rect(this.x-5, this.y+this.s, 40, 20);
+        rect(this.x, this.y+this.s, 30, 400-this.y-this.s);
+    };
+    this.move = function(d){
+        this.x-=this.s2;
+        if(this.x<-30){
+            this.x = 570;
+            this.y = floor(random(50, 250));
+        }
+        if(65 === this.x){
+            d.s++;
+        }
+    };
+};
+//GENERATING NEW FLAPPY
+var p = [];
+for(var i = 0;i < 4;i++){
+    p.push(new pipeObstacle(i*150+270));
+}
+var d = new flappyBall();
+//BUTTON FUNCTION
+var overButton;
+var buttonHeight = 75;
+var buttonPressed = false; 
+var drawButton = function(buttonText, x, y, length, color){
+overButton = false; // Mouse over state
+    var v = 255;
+    var vb = 220;
+    var val = v;
+    fill(0, 0, 0, 100); // Drop Shadow using Alpha
+    noStroke(); // No border around button Shadow
+    rect(x - 2, y + 2, length, buttonHeight + 1, 3);
+if(mouseX >= x && mouseX <= x + length && mouseY >= y && mouseY <= y + buttonHeight){
+    val = vb;
+    overButton = true;
+    if(mouseIsPressed){
+        x -= 2; // Move Button 2 Pixels if Pressed
+        y += 2;
+    }
+}
+    strokeWeight(2);
+    stroke(0, 0, 0);
+    fill(val);
+    rect(x, y, length, buttonHeight, -2);
+    textAlign(CENTER, CENTER);
+    fill(0);
+    textSize(12);
+    text(buttonText, x + length / 2, y + buttonHeight / 2);
+};
+//DRAW
+draw = function(){
+    background(209, 50, 50); 
+    switch(gameState){ 
+        case "Intro": 
+            textSize(47);
+            text("Lava Flap",197,58);
+            textSize(30);
+            fill(0, 0, 0);
+            text("Made by RaghavCS",194,98);
+            textSize(20);
+            drawButton('Play', 173, 198, 50, 50);
+            if(overButton && mouseIsPressed && !buttonPressed){
+                gameState = 1; 
+                buttonPressed = true;
+            }
+break; 
+    case 1: 
+        resetMatrix();
+        rectMode(UP);
+        background(201, 69, 69);
+        d.draw();
+        d.move();
+        d.die(p);
+        for(var i in p){
+            p[i].draw();
+            p[i].move(d);
+        }
+        fill(255, 255, 255);
+        text(d.s, 200, 20);
+break;
+}
+if (!mouseIsPressed) {
+    buttonPressed = false;
+}
+}; 
