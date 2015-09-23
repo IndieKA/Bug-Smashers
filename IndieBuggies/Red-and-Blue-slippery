@@ -1,0 +1,1536 @@
+// THIS IS A TROLL. 
+
+/******************************************
+ * Colorblox - a platformer by KA Overlords (Functionized, Kaadmy, King Abdullah, Virus)
+ *
+ * Please do not plagiarize or uncredit in some sort of way that disappeals to the team.
+ * 
+ *****************************************************
+ * Credits:
+ * - Kaadmy for new graphics, turrets, and teleporters. You can find his profile here: https://www.khanacademy.org/profile/Kaadmy/programs
+ 
+ * - Ryan Kee for collision testing obj API, and level construction. You can find his profile here: https://www.khanacademy.org/profile/RaZiire/programs
+ 
+ * - Thomas L for camera function. You can find his profile here: https://www.khanacademy.org/profile/voidx/programs
+ ****************************************************/
+var logoTime = 10;
+// Define Variables used to create the 3D rotating sphere
+var drawNodes = false;
+var drawEdges = true;
+var sine = 0;
+noStroke();
+
+// Draw the "Nodes"
+var nodes = [];
+for(var a = 0; a < 36; a++) {
+    nodes.push([200 * sin(a * 10), 200 * cos(a * 10), 0]);
+}
+for(var a = 0; a < 36; a++) {
+    nodes.push([200 * sin(a * 10), 0, 200 * cos(a * 10)]);
+}
+for(var a = 0; a < 36; a++) {
+    nodes.push([0, 200 * cos(a * 10), 200 * sin(a * 10)]);
+}
+var node2 = nodes;
+
+// Draw the "Edges"
+var edges = [];
+for(var a = 0; a < 35; a++) {
+    edges.push([a, a + 1]);
+}
+edges.push([0, 35]);
+for(var a = 36; a < 71; a++) {
+    edges.push([a, a + 1]);
+}
+edges.push([36, 71]);
+for(var a = 72; a < 107; a++) {
+    edges.push([a, a + 1]);
+}
+edges.push([72, 107]);
+
+// Draw the faces and the XZ YZ and the XY coords
+var faces = [];
+var XY = 0,
+    XZ = 0,
+    YZ = 0;
+
+// Now, call the nodes and edges
+var drawNodes = function() {
+    noStroke();
+    fill(0);
+    for(var b = 0; b < node2.length; b++) {
+        var size = 0.011875 * node2[b][2] + 5.25;
+        ellipse(node2[b][0], node2[b][1], size, size);
+    }
+};
+var drawEdges = function(r, g, b) {
+    stroke(0);
+    for(var b = 0; b < edges.length; b++) {
+        var size = -0.011875 * (nodes[edges[b][0]][2] + nodes[edges[b][1]][2]) / 2 + 4;
+        strokeWeight(12);
+        stroke(random(255,0));
+        line(node2[edges[b][0]][0], node2[edges[b][0]][1], node2[edges[b][1]][0], node2[edges[b][1]][1]);
+    }
+    
+};
+
+// Call the rotation in a function(t);
+var rotateXY = function(t) {
+    XY += t;
+    while(XY >= 360) {
+        XY -= 360;
+    }
+    while(XY < 0) {
+        XY += 360;
+    }
+    var sin_t = sin(t);
+    var cos_t = cos(t);
+    for(var b = 0; b < node2.length; b++) {
+        var x = node2[b][0];
+        var y = node2[b][1];
+        node2[b][0] = x * cos_t - y * sin_t;
+        node2[b][1] = y * cos_t + x * sin_t;
+    }
+};
+var rotateXZ = function(t) {
+    XZ += t;
+    while(XZ >= 360) {
+        XZ -= 360;
+    }
+    while(XZ < 0) {
+        XZ += 360;
+    }
+    var sin_t = sin(t);
+    var cos_t = cos(t);
+    for(var b = 0; b < node2.length; b++) {
+        var x = node2[b][0];
+        var z = node2[b][2];
+        node2[b][0] = x * cos_t - z * sin_t;
+        node2[b][2] = z * cos_t + x * sin_t;
+    }
+};
+var rotateYZ = function(t) {
+    YZ += t;
+    while(YZ >= 360) {
+        YZ -= 360;
+    }
+    while(YZ < 0) {
+        YZ += 360;
+    }
+    var sin_t = sin(t);
+    var cos_t = cos(t);
+    for(var b = 0; b < node2.length; b++) {
+        var y = node2[b][1];
+        var z = node2[b][2];
+        node2[b][1] = y * cos_t - z * sin_t;
+        node2[b][2] = z * cos_t + y * sin_t;
+    }
+};
+
+// Draw the star background
+var starBackground = function() {
+    this.x = random(1, 800);
+    this.y = random(1, 400);
+    this.size = random(0.1, 3.2);
+    this.speed = this.size;
+    this.drawStar = function() {
+        ellipse(this.x, this.y, this.size, this.size);
+    };
+    this.starMover = function() {
+        this.x = this.x - this.speed;
+        if(this.x < 0) {
+            this.x = random(400, 800);
+        }
+    };
+};
+var stars = [];
+for(var i = 0; i < 1000; i++) {
+    stars.push(new starBackground());
+}
+
+// Start the draw loop
+var aa = 0.5;
+var version = "2.0";
+var gameState = "Menu";
+var tp = 0;
+var exiting = 0;
+var playerCoins = 0;
+var lives = 3;
+var screenColor = [255, 0, 0];
+/**Sound**/
+var sounds = {
+    jump: getSound("retro/jump1"),
+    portal: getSound("retro/laser4"),
+    teleport: getSound("retro/thruster-short"),
+    lava: getSound("retro/rumble"),
+    coin: getSound("retro/coin"),
+    explode: getSound("retro/boom1"),
+};
+/**Keys**/
+var keys = [];
+var keyPressed = function() {
+    keys[keyCode] = true;
+};
+var keyReleased = function() {
+    keys[keyCode] = false;
+};
+/**Mouse**/
+var mouse = [];
+var mousePress = [];
+var mousePressed = function() {
+    mouse[mouseButton] = true;
+    mousePress[mouseButton] = true;
+};
+var mouseReleased = function() {
+    mouse[mouseButton] = false;
+};
+/**Buttons**/
+var drawButton = function(txt, x, y, w, h, ts) {
+    var r = map(sin(millis() * 0.5), -1, 1, 0, 255);
+    var g = map(sin((millis() * 0.8) + 87), -1, 1, 100, 200);
+    var b = map(sin(millis() + 124), -1, 1, 255, 0);
+    ts = ts || 30;
+    var v = "none";
+
+    if (mouseX > x && mouseY > y && mouseX < x + w && mouseY < y + h) {
+        cursor(HAND);
+        if (mousePress[LEFT]) {
+            v = "click";
+        } else {
+            v = "hover";
+        }
+    }
+    var s = map(sin(millis() * 0.5), -1, 1, 2, 20);
+
+    if (v === "hover") {
+        fill(r, g, b);
+        noStroke();
+        rect(x - (s / 2), y - (s / 2), w + s, h + s, 10 + (s * 0.5));
+        fill(255, 255, 255);
+    }
+
+    stroke(r, g, b);
+    strokeWeight(5);
+    rect(x, y, w, h, 10);
+
+    fill(40, 40, 40);
+    textAlign(CENTER, CENTER);
+    textSize(ts);
+    text(txt, x + (w / 2), y + (h / 2));
+
+    noStroke();
+    fill(b, g, r);
+    var stripeX = (millis() * 0.24) % (w * 8) - 30;
+    if (stripeX < w) {
+        rect(constrain(x + stripeX, x, x + w), y, constrain(w - stripeX, 0, 30) - constrain(-stripeX, 0, 30), h);
+    }
+
+    return (v);
+};
+/**Collisions**/
+var collide = function(obj1, obj2) {
+    return (obj1.x < obj2.x + obj2.w && obj1.x + obj1.w > obj2.x &&
+        obj1.y < obj2.y + obj2.h && obj1.y + obj1.h > obj2.y);
+};
+/**Camera (Credit to Thomas L for this**/
+var Camera = function(x, y, w, h, cameraX, cameraY, levelWidth, levelHeight, speed) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.cameraX = cameraX;
+    this.cameraY = cameraY;
+    this.levelWidth = levelWidth;
+    this.levelHeight = levelHeight;
+    this.speed = this.speed || speed; // the lower the number, the faster the speed
+    Camera.prototype.follow = function(ent) {
+        var x = -ent.x + this.x + (this.w / 2) - (ent.w / 2);
+        var y = -ent.y + this.y + (this.h / 2) - (ent.h / 2);
+        var a = atan2(y - this.cameraY, x - this.cameraX);
+        var v = dist(x, y, this.cameraX, this.cameraY) / this.speed;
+        this.cameraX += v * cos(a);
+        this.cameraY += v * sin(a);
+        var width = this.x + this.w - this.levelWidth;
+        var height = this.y + this.h - this.levelHeight;
+        this.cameraX = min(this.cameraX, this.x);
+        this.cameraX = max(this.cameraX, width);
+        this.cameraY = min(this.cameraY, this.y);
+        this.cameraY = max(this.cameraY, height);
+    };
+    Camera.prototype.view = function(ent) {
+        var cameraX = -this.cameraX + this.x,
+            cameraY = -this.cameraY + this.y,
+            cameraWidth = ent.w - this.w,
+            cameraHeight = ent.w - this.h;
+
+        if (ent.x > cameraX - ent.w &&
+            ent.x < cameraX - cameraWidth + ent.w &&
+            ent.y > cameraY - ent.h &&
+            ent.y < cameraY - cameraHeight + ent.h) {
+            var camView = {
+                x: (this.cameraX + ent.x),
+                y: (this.cameraY + ent.y),
+                w: ent.w,
+                h: ent.h,
+                cam: this
+            };
+
+            return camView;
+        }
+    };
+};
+/**Player**/
+var characterHue = 130; // 0-255
+var characterGender = "male"; // male, female
+var characterMouth = "none"; // none, simple, evil
+var characterEyes = "default"; // none, default, evil
+var drawCharacter = function(x, y, w, h) {
+    pushMatrix();
+    translate(x, y);
+
+    colorMode(HSB);
+    fill(characterHue, 255, 255);
+    colorMode(RGB);
+
+    if (characterGender === "male") {
+        rect(0, 0, w, h, 3);
+    } else {
+        rect(w * 0.05, 0, w * 0.9, h, 6);
+    }
+
+    var blink = constrain(map(sin(millis() * 0.05), -1, 1, 0, 2000), 0, 1);
+
+    pushMatrix();
+    translate(w / 2, 4);
+    scale(1, blink);
+
+    if (characterEyes === "default") {
+        fill(50);
+        rect(-10, 0, 5, 8);
+        rect(5, 0, 5, 8);
+    } else if (characterEyes === "evil") {
+        fill(150, 0, 0);
+        rect(-8, 0, 3, 8);
+        rect(5, 0, 3, 8);
+    }
+
+    popMatrix();
+
+    if (characterMouth === "simple") {
+        fill(50);
+        rect((w / 2) - 5, h * 0.7, 10, 4);
+    } else if (characterMouth === "evil") {
+        fill(150, 0, 0);
+        rect((w / 2) - 2, h * 0.74, 4, 2);
+    }
+
+    popMatrix();
+};
+var Player = function(x, y, w, h, keyInputs, col) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+
+    this.keyInputs = keyInputs;
+    this.color = color;
+
+    this.xVEL = 0;
+    this.yVEL = 0;
+
+    this.maxSpeed = 3;
+
+    this.blockAccel = 0.15;
+    this.iceAccel = 0.05;
+    this.accel = this.blockAccel;
+
+    this.jumping = false;
+    this.jSpeed = 8;
+    this.gravity = 0.4;
+
+    this.health = 100;
+    this.lastDamage = 100;
+    this.dead = false;
+    this.spawn = {
+        x: this.x,
+        y: this.y
+    };
+    this.deathCounter = 0;
+
+    this.lightIntensity = 200;
+    this.particles = [];
+
+    this.lastTele = Infinity;
+
+    this.color = col;
+    Player.prototype.damage = function(amt) {
+        if (this.lastDamage > 30) {
+            this.health -= amt;
+            this.lastDamage = 0;
+            playSound(sounds.lava);
+        }
+    };
+    Player.prototype.heal = function(amt) {
+        this.health += amt;
+        this.lastDamage = 0;
+    };
+    Player.prototype.update = function(blocks) {
+        this.lastTele += 5;
+        this.lastDamage++;
+        if (!this.dead) {
+            if (keys[this.keyInputs[0]]) {
+                this.xVEL += this.accel;
+            }
+            if (keys[this.keyInputs[1]]) {
+                this.xVEL -= this.accel;
+            }
+
+            if (keys[this.keyInputs[2]] && !this.jumping) {
+                this.yVEL = -this.jSpeed;
+                this.jumping = true;
+                playSound(sounds.jump);
+            }
+
+            if (!keys[this.keyInputs[0]] && !keys[this.keyInputs[1]]) {
+                if (this.xVEL > 0) {
+                    this.xVEL -= this.accel;
+                }
+                if (this.xVEL < 0) {
+                    this.xVEL += this.accel;
+                }
+            }
+
+            if (Math.abs(this.xVEL) > this.maxSpeed) {
+                if (this.xVEL > 0) {
+                    this.xVEL = this.maxSpeed;
+                }
+                if (this.xVEL < 0) {
+                    this.xVEL = -this.maxSpeed;
+                }
+            }
+
+            this.x += this.xVEL;
+            this.applyCollision(blocks, this.xVEL, 0);
+
+            this.jumping = true;
+            this.y += this.yVEL;
+            this.applyCollision(blocks, 0, this.yVEL);
+            this.yVEL += this.gravity;
+        }
+
+        if (this.y > 400) {
+            this.health -= 5;
+        }
+
+        if (this.health <= 0) {
+            this.dead = true;
+        }
+
+        if (this.dead) {
+            this.deathCounter++;
+            if (this.deathCounter > 100) {
+                this.x = this.spawn.x;
+                this.y = this.spawn.y;
+                this.deathCounter = 0;
+                this.dead = false;
+                this.health = 100;
+                lives--;
+                if (lives <= 0) {
+                    gameState = "Lose";
+                }
+            }
+        }
+    };
+    Player.prototype.applyCollision = function(obj, velx, vely) {
+        for (var i = 0; i < obj.length; i++) {
+            if (collide(this, obj[i])) {
+                if(obj[i].splippery) {
+                    this.accel=this.iceAccel;
+                } else {
+                    this.accel=this.blockAccel;
+                }
+                if (vely > 0) {
+                    this.yVEL = 0;
+                    this.jumping = false;
+                    this.y = obj[i].y - this.h;
+                }
+                if (vely < 0) {
+                    this.yVEL = 0;
+                    this.jumping = true;
+                    this.y = obj[i].y + obj[i].h;
+                }
+                if (velx < 0) {
+                    this.xVEL = 0;
+                    this.x = obj[i].x + obj[i].w;
+                }
+                if (velx > 0) {
+                    this.xVEL = 0;
+                    this.x = obj[i].x - this.w;
+                }
+            }
+        }
+    };
+    Player.prototype.draw = function(cam, blocks) {
+        var view = cam.view(this);
+        if (view && !this.dead && ((this.lastDamage < 30 && frameCount % 5 <= 1) || this.lastDamage > 30)) {
+            noStroke();
+
+            drawCharacter(view.x, view.y, view.w, view.h);
+
+            this.particles.length = 0; // (comment from Kaadmy) from what I understand, saying this.particles.length=0 does NOTHING. you should do this.particles=[] to remove them.
+        } else if (view && this.dead) {
+            if (this.particles.length < 20) {
+                this.particles.push({
+                    x: view.x + view.w / 2,
+                    y: view.y + view.h / 2,
+                    w: view.w / 10,
+                    h: view.h / 10,
+                    velx: random(-2, 2),
+                    vely: -3,
+                    gravity: 0.4,
+                    angle: random(-90, -270),
+                    color: this.color
+                });
+            }
+
+            noStroke();
+            for (var i = 0; i < this.particles.length; i++) {
+                var p = this.particles[i];
+                fill(p.color);
+                rect(p.x, p.y, p.w, p.h);
+
+                p.x += p.velx;
+                p.y += p.vely;
+                p.vely += p.gravity;
+
+                for (var b = 0; b < blocks.length; b++) {
+                    if (collide(p, blocks[b])) {
+                        if (p.vely > 0) {
+                            p.vely--;
+                            p.vely = -p.vely;
+                        }
+                    }
+                }
+            }
+        }
+    };
+    Player.prototype.stats = function() {
+        noStroke();
+
+        fill(230, 70, 70);
+        rect(-10, -10, 80, 55, 10);
+        fill(230, 210, 70);
+        rect(160, -10, 80, 55, 10);
+        fill(70, 230, 70);
+        rect(330, -10, 80, 55, 10);
+
+        textAlign(CENTER, CENTER);
+        textSize(18);
+
+        fill(50, 50, 50);
+
+        textSize(18);
+        text(max(0, this.health), 35, 30);
+        text(playerCoins, 200, 30);
+        text(lives, 365, 30);
+
+        textSize(14);
+        text("Health", 35, 10);
+        text("Coins", 200, 10);
+        text("Lives", 365, 10);
+    };
+};
+var players = [];
+players.attachToGame = function(x, y, w, h, keyInputs, color) {
+    players.push(new Player(x, y, w, h, keyInputs, color));
+};
+players.apply = function(blocks, cam) {
+    for (var i = 0; i < players.length; i++) {
+        players[i].update(blocks);
+        players[i].draw(cam, blocks);
+        players[i].stats();
+    }
+};
+/**Ice**/
+var Ice = function(x, y, w, h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.splippery = true;
+    Ice.prototype.draw = function(cam) {
+        var view = cam.view(this);
+
+        if (view) {
+            noStroke();
+            fill(170, 170, 230);
+            rect(view.x, view.y, view.w, view.h);
+            noStroke();
+            fill(220, 220, 255);
+            triangle(view.x + 2, view.y + 2, view.x + 10, view.y + 2, view.x + 2, view.y + 10);
+
+        }
+    };
+};
+var ice = [];
+ice.attachToGame = function(x, y, w, h) {
+    ice.push(new Ice(x, y, w, h));
+};
+ice.apply = function(cam) {
+    for (var i = 0; i < ice.length; i++) {
+        ice[i].draw(cam);
+    }
+};
+/**Block**/
+var Block = function(x, y, w, h, color) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.color = color;
+    Block.prototype.draw = function(cam) {
+        var view = cam.view(this);
+
+        if (view) {
+            noStroke();
+            stroke(222, 222, 222);
+            fill(214, 214, 214);
+            rect(view.x, view.y, view.w, view.h);
+            noStroke();
+            fill(255, 255, 255);
+            triangle(view.x + 2, view.y + 2, view.x + 10, view.y + 2, view.x + 2, view.y + 10);
+
+        }
+    };
+};
+var blocks = [];
+blocks.attachToGame = function(x, y, w, h, color) {
+    blocks.push(new Block(x, y, w, h, color));
+};
+blocks.apply = function(cam) {
+    for (var i = 0; i < blocks.length; i++) {
+        blocks[i].draw(cam);
+    }
+};
+/**Coin**/
+var Coin = function(x, y, w, h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    Coin.prototype.update = function(coins, id, players) {
+        for (var i = 0; i < players.length; i++) {
+            if (collide(this, players[i]) && !players[i].dead) {
+                coins.splice(id, 1);
+                playerCoins++;
+                players[i].health += 5;
+                playSound(sounds.coin);
+                return (1);
+            }
+        }
+        return (0);
+    };
+    Coin.prototype.draw = function(cam) {
+        var view = cam.view(this);
+
+        if (view) {
+            noStroke();
+
+            pushMatrix();
+            translate(view.x + (view.w / 2), view.y + (view.h / 2));
+
+            scale(sin(millis() * 0.3), 1);
+
+            fill(230, 210, 70);
+            ellipse(0, 0, view.w * 0.75, view.h * 0.75);
+
+            var w = view.w * 0.55;
+            var h = view.h * 0.55;
+
+            fill(250, 240, 120);
+            arc(0, 0, w, h, 15, 75);
+            arc(0, 0, w, h, 135, 185);
+            arc(0, 0, w, h, 245, 305);
+
+            fill(200, 180, 50);
+            arc(0, 0, w, h, -55, 15);
+            arc(0, 0, w, h, 75, 135);
+            arc(0, 0, w, h, 185, 245);
+
+            popMatrix();
+        }
+    };
+};
+var coins = [];
+coins.attachToGame = function(x, y, w, h) {
+    coins.push(new Coin(x, y, w, h));
+};
+coins.apply = function(coins, cam) {
+    for (var i = 0; i < coins.length; i++) {
+        coins[i].draw(cam);
+        i -= coins[i].update(coins, i, players);
+    }
+};
+/**Turrets**/
+var Bullet = function(x, y, w, h, xVEL, yVEL) {
+    this.sx = x; // original position
+    this.sy = y;
+
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+
+    this.xVEL = xVEL;
+    this.yVEL = yVEL;
+};
+Bullet.prototype.update = function(bullets, id, players, lavas) {
+    this.x += this.xVEL;
+    this.y += this.yVEL;
+
+    if (dist(this.x, this.y, this.sx, this.sy) > 480) {
+        bullets.splice(id, 1);
+        return (1);
+    }
+
+    for (var i = 0; i < lavas.length; i++) {
+        if (collide(this, lavas[i])) {
+            playSound(sounds.explode);
+            return (1);
+        }
+    }
+
+    for (var i = 0; i < players.length; i++) {
+        if (collide(this, players[i]) && !players[i].dead) {
+            playSound(sounds.explode);
+            players[i].damage(20);
+            return (1);
+        }
+    }
+    return (0);
+};
+Bullet.prototype.draw = function(cam) {
+    var view = cam.view(this);
+
+    if (view) {
+        noStroke();
+        fill(50, 50, 50);
+        ellipse(view.x, view.y, view.w, view.h);
+    }
+};
+var Turret = function(x, y, w, h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+
+    this.a = 0;
+
+    this.bullets = [];
+    this.lastShot = 1000;
+    Turret.prototype.update = function(cam, players, lavas) {
+        this.lastShot++;
+        for (var i = 0; i < players.length; i++) {
+            if (dist(players[i].x, players[i].y, this.x, this.y) < 120) { // 4 blocks
+                this.a = 270 + atan2(players[i].y - this.y, players[i].x - this.x);
+                if (this.lastShot > 80) {
+                    this.bullets.push(new Bullet(this.x + (this.w / 2), this.y + (this.h / 2), this.w / 4, this.h / 4, -sin(this.a) * 1.5, cos(this.a) * 1.5));
+                    this.lastShot = 0;
+                }
+            } else {
+                this.a = 0;
+            }
+        }
+        for (var j = 0; j < this.bullets.length; j++) {
+            this.bullets[j].draw(cam);
+            j -= this.bullets[j].update(this.bullets, j, players, lavas);
+        }
+    };
+    Turret.prototype.draw = function(cam) {
+        var view = cam.view(this);
+
+        if (view) {
+            noStroke();
+            fill(170, 170, 170);
+            ellipse(view.x + (view.w / 2), view.y + (view.h / 2), view.w, view.h);
+
+            pushMatrix();
+            translate(view.x + (view.w / 2), view.y + (view.h / 2));
+            rotate(this.a);
+            strokeWeight(7);
+            stroke(50, 50, 50);
+            line(0, 7, 0, 15);
+
+            popMatrix();
+
+            noStroke();
+            fill(0);
+            ellipse(view.x + (view.w / 2), view.y + (view.h / 2), view.w / 2, view.h / 2);
+        }
+    };
+};
+var turrets = [];
+turrets.attachToGame = function(x, y, w, h) {
+    turrets.push(new Turret(x, y, w, h));
+};
+turrets.apply = function(cam, players, lavas) {
+    for (var i = 0; i < turrets.length; i++) {
+        turrets[i].update(cam, players, lavas);
+        turrets[i].draw(cam);
+    }
+};
+/**Lava**/
+var lava = function(x, y, w, h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    lava.prototype.update = function(players) {
+        for (var i = 0; i < players.length; i++) {
+            if (collide(this, players[i]) && !players[i].dead) {
+                players[i].vely = -players[i].jumpHeight;
+                players[i].damage(30);
+            }
+        }
+    };
+    lava.prototype.draw = function(cam) {
+        var view = cam.view(this);
+
+        if (view) {
+            colorMode(HSB);
+            var h = (sin(millis() * 0.15) * 12) + 12;
+
+            fill(h, 255, 255);
+            colorMode(RGB);
+            rect(view.x, view.y, view.w, view.h);
+        }
+    };
+};
+var lavas = [];
+lavas.attachToGame = function(x, y, w, h) {
+    lavas.push(new lava(x, y, w, h));
+};
+lavas.apply = function(cam) {
+    for (var i = 0; i < lavas.length; i++) {
+        lavas[i].update(players);
+        lavas[i].draw(cam);
+    }
+};
+/**Teleport**/
+var Tele = function(x, y, w, h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    Tele.prototype.update = function(teles, id, cam, players) {
+        var possibleTeles = [];
+        for (var i = 0; i < teles.length; i++) {
+            if (i !== id) {
+                possibleTeles.push(teles[i]);
+            }
+        }
+
+        var r = floor(random(0, possibleTeles.length - 0.01));
+        var randomTele = possibleTeles[r];
+
+        for (var i = 0; i < players.length; i++) {
+            if (collide(this, players[i]) && players[i].lastTele >= 500 && !players[i].dead) {
+                players[i].lastTele = 0;
+
+                players[i].x = randomTele.x;
+                players[i].y = randomTele.y;
+
+                players[i].xVEL = 0;
+                players[i].yVEL = 0;
+
+                playSound(sounds.teleport);
+            }
+        }
+    };
+    Tele.prototype.draw = function(cam) {
+        var view = cam.view(this);
+
+        if (view) {
+            stroke(200, 50, 200);
+            strokeWeight(2);
+
+            var s = sin(millis() * 0.2) * (view.h / 2) + (view.h / 2);
+            line(view.x, view.y + s, view.x + view.w, view.y + s);
+            s = cos(millis() * 0.3) * (view.h / 2) + (view.h / 2);
+            line(view.x, view.y + s, view.x + view.w, view.y + s);
+        }
+    };
+};
+var teles = [];
+teles.attachToGame = function(x, y, w, h) {
+    teles.push(new Tele(x, y, w, h));
+};
+teles.apply = function(cam, players) {
+    //    debug(teles);
+    for (var i = 0; i < teles.length; i++) {
+        teles[i].update(teles, i, cam, players);
+        teles[i].draw(cam);
+    }
+};
+/**Portal (End)**/
+var Portal = function(x, y, w, h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.complete = false;
+    Portal.prototype.update = function(players) {
+        screenColor = [255, 255, 255];
+        for (var i = 0; i < players.length; i++) {
+            if (collide(this, players[i]) && exiting === 0) {
+                exiting = 1;
+                playSound(sounds.portal);
+            }
+        }
+    };
+    Portal.prototype.draw = function(cam, players) {
+        var view = cam.view(this);
+
+        if (view) {
+            stroke(0, 200, 100);
+            strokeWeight(3);
+            fill(0, 200, 100, 50);
+
+            ellipseMode(CENTER);
+
+            pushMatrix();
+            translate(view.x + (view.w / 2), view.y + (view.h / 2));
+            rotate(millis() * 0.1);
+            scale(sin(millis() * 0.2), 1);
+            ellipse(0, 0, view.w, view.h);
+            popMatrix();
+
+            pushMatrix();
+            translate(view.x + (view.w / 2), view.y + (view.h / 2));
+            rotate(millis() * 0.10);
+            scale(1, cos(millis() * 0.2));
+            ellipse(0, 0, view.w, view.h);
+            popMatrix();
+        }
+    };
+};
+var end = [];
+end.attachToGame = function(x, y, w, h) {
+    end.push(new Portal(x, y, w, h));
+};
+end.apply = function(cam, players) {
+    for (var i = 0; i < end.length; i++) {
+        end[i].update(players);
+        end[i].draw(cam, players);
+    }
+};
+/**OBJ Amplifier**/
+var obj = [players, blocks, lavas, teles, coins, turrets, end];
+obj.remove = function() {
+    for (var i = 0; i < obj.length; i++) {
+        for (var j = 0; j < obj[i].length; j++) {
+            obj[i].splice(j, obj[i].length);
+        }
+    }
+};
+/**Levels**/
+var Levels = function() {
+    this.levels = [
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "#                         #",
+            "#   #######################",
+            "##                        #",
+            "#P                        #",
+            "#=========================#",
+            "###########################"
+        ],
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                        ###",
+            "                         T#",
+            "#T                       ##",
+            "##                        #",
+            "#P    A$  A$  A$  A$ :A$ @#",
+            "###########################"
+        ],
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                         @ ",
+            "                         # ",
+            "                       #   ",
+            "                    #      ",
+            "                 #         ",
+            "              #            ",
+            "           #               ",
+            "        #                  ",
+            "P    #                     ",
+            "###                        "
+        ],
+        [
+            "                           ",
+            "          @                ",
+            "         ###               ",
+            "              $            ",
+            "             ###           ",
+            "          $                ",
+            "         ###               ",
+            "              $            ",
+            "             ###           ",
+            "          $                ",
+            "         ###               ",
+            "                           ",
+            "P            ###           ",
+            "###########################"
+        ],
+        [
+            "                ###        ",
+            "               :#T#        ",
+            "               T#@#        ",
+            "          $   #####        ",
+            "          #                ",
+            "      #                    ",
+            "                           ",
+            "        ##                 ",
+            "           $               ",
+            "           ##  :           ",
+            "               ##   $      ",
+            "                   ##    P ",
+            "                       ####",
+            "                           "
+        ],
+        [
+            "                           ",
+            "          @    :           ",
+            "         ###   #       #   ",
+            "             $$$    #      ",
+            "             ###           ",
+            "           #               ",
+            "   ### $$            #     ",
+            "       ##                  ",
+            "           #        #      ",
+            "                #          ",
+            "               ###         ",
+            "              #####        ",
+            "P            ########      ",
+            "###########################"
+        ],
+        [
+            "                           ",
+            "   @   $     :  T          ",
+            "   #   #A#    ###   #    ##",
+            "         :  $$         ##  ",
+            "       #  #A##             ",
+            "                 $         ",
+            "               #A#         ",
+            "                     #     ",
+            "                   $       ",
+            "                   # # #   ",
+            "              #            ",
+            "          $$$      # # #   ",
+            "P       # ### ###         T",
+            "###########################"
+        ],
+        [
+            "       @                   ",
+            "       #  #                ",
+            "               #           ",
+            "                   #       ",
+            "                       T   ",
+            "                       #   ",
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "                           ",
+            "             ##  T         ",
+            "            #    # #       ",
+            "          #A#         #    ",
+            "                    #      ",
+            "P       #####    #         ",
+            "########     ##############"
+        ],
+        [
+            "T                          ",
+            "A                          ",
+            "A             #          # ",
+            "A                   #      ",
+            "A         #               T",
+            "                          #",
+            "              #            ",
+            "                  ##       ",
+            "T  AAAAAAAAAAAAAAAAAAA     ",
+            "                       ###T",
+            "@#                        #",
+            "##                   #     ",
+            "P                       #  ",
+            "####  #  #  #   #   #      "
+        ],
+        //Bonus level
+        [
+            "TTTTTTTTTTTTTTTTTTTTTTTTTTT",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$#",
+            "PTTTTTTTTTTTTTTTTTTTTTTTTT@",
+            "###########################",
+        ],
+    ];
+    this.level = 0;
+    this.levelsWidth = [800, 400];
+    this.levelsHeight = [400, 400];
+    this.cam = new Camera(0, 0, width, height, 0, 0, this.levelsWidth[this.level], this.levelsHeight[this.level], 8);
+    Levels.prototype.loadMap = function() {
+        for (var col = 0; col < this.levels[this.level].length; col++) {
+            for (var row = 0; row < this.levels[this.level][col].length; row++) {
+                var txt = this.levels[this.level][col][row];
+                if (txt === "P") {
+                    colorMode(HSB);
+                    players.attachToGame(row * 30, col * 30, 30, 30, [RIGHT, LEFT, UP, DOWN], color(characterHue, 255, 255));
+                    colorMode(RGB);
+                } else if (txt === "#") {
+                    blocks.attachToGame(row * 30, col * 30, 30, 30, color(20, 20, 20));
+                } else if (txt === "=") {
+                    ice.attachToGame(row * 30, col * 30, 30, 30);
+                } else if (txt === "$") {
+                    coins.attachToGame(row * 30, col * 30, 30, 30);
+                } else if (txt === ":") {
+                    turrets.attachToGame(row * 30, col * 30, 30, 30);
+                } else if (txt === "A") {
+                    lavas.attachToGame(row * 30, col * 30, 30, 30);
+                } else if (txt === "T") {
+                    teles.attachToGame(row * 30, col * 30, 30, 30);
+                } else if (txt === "@") {
+                    end.attachToGame(row * 30, col * 30, 30, 30);
+                }
+            }
+        }
+        for(var i=0;i<ice.length;i++) {
+            blocks.push(ice[i]);
+        }
+    };
+    Levels.prototype.apply = function() {
+        this.cam.follow(players[0]);
+
+        blocks.apply(this.cam);
+        ice.apply(this.cam);
+        coins.apply(coins, this.cam, players);
+        turrets.apply(this.cam, players, lavas);
+        lavas.apply(this.cam, players);
+        teles.apply(this.cam, players);
+        end.apply(this.cam, players);
+
+        var exited = false;
+
+        if (exiting === 1) {
+            tp += 5;
+            if (tp > 255) {
+                tp = 255;
+                exiting = 2;
+                exited = true;
+            }
+        } else if (exiting === 2) {
+            tp -= 10;
+            if (tp < 0) {
+                tp = 0;
+                exiting = 0;
+            }
+        }
+
+        if (exited) {
+            this.level++;
+            obj.remove();
+            if (this.level >= this.levels.length) {
+                this.level = 0;
+                gameState = "Win";
+            }
+            this.loadMap();
+        }
+
+        players.apply(blocks, this.cam);
+    };
+};
+var levels = new Levels();
+levels.loadMap();
+/**Each Screen*/
+// Credit to DY for this!
+//Object that stores a pair of numbers
+var vec = function(x, y){
+    return {
+        x: x,
+        y: y,
+        isEqual: function(vec2){
+            return this.x === vec2.x && this.y === vec2.y;
+        }
+    };
+};
+var randomHue = function(a, s, b){
+    if(!s){s = 0;}
+    if(!b){b = 255;}
+    var randomHueValues = [s, b, random(s, b)];
+    var fillColor = [0, 0, 0];
+    for(var i = 0; i < 3; i++){
+        var randomIndex = floor(random(0, randomHueValues.length));
+        var randomValue = randomHueValues[randomIndex];
+        randomHueValues.splice(randomIndex, 1);
+        fillColor[i] = randomValue;
+    }
+    
+    a = a ? a : 300;
+    return color(fillColor[0], fillColor[1], fillColor[2], a);
+};
+var transformCircles = [];
+var transformCircleDistance = 40;
+var transformCircleSizeSpeed = 15;
+var transformCircleInitialAlpha = 100;
+var transformCircleFadeSpeed = 1.5;
+var clearTransformCircles = function(){
+    transformCircles = [];
+};
+var transformCircle = function(position, ccolor, size){
+    transformCircles.push({
+        pos: position ? position : vec(random(-200, 600), random(-200, 600)),
+        color: ccolor ? ccolor : randomHue(),
+        alpha: transformCircleInitialAlpha,
+        size: size ? size : 0
+    });
+};
+var background1 = function() {
+    background((frameCount / 4) % 255, 200, 255);
+    noStroke();
+    pushMatrix();
+    for(var i = 0; i < transformCircles.length; i++){
+        var circle = transformCircles[i];
+        
+        resetMatrix();
+        translate(circle.pos.x, circle.pos.y);
+        
+        if(circle.lastCircleInASequence){
+            fill(red(circle.color), green(circle.color), blue(circle.color), circle.alpha / 7);
+        }else{
+            noFill();
+        }
+        strokeWeight(transformCircleDistance);
+        stroke(red(circle.color), green(circle.color), blue(circle.color), circle.alpha-52);
+        rectMode(CENTER);
+        rect(0, 0, max(0, circle.size), max(0, circle.size));
+    }
+    popMatrix();
+    resetMatrix();
+    rectMode(LEFT);
+    var i = 0;
+    
+    while(i < transformCircles.length){
+        transformCircles[i].alpha -= transformCircleFadeSpeed;
+        transformCircles[i].size += transformCircleSizeSpeed;
+        
+        if(transformCircles[i].alpha <= 1){
+            transformCircles.splice(i, 1);
+        }else{
+            i++;
+        }
+    }
+    if(frameCount % 7 === 0){
+        transformCircle(vec(random(-100, 500), random(-100, 500)));
+    }
+};
+var background2 = function() {
+    background((frameCount / 4) % 255, 200, 255);
+    var r = map(sin(millis() * 0.5), -1, 1, 0, 255);
+    var g = map(sin((millis() * 0.8) + 87), -1, 1, 100, 200);
+    var b = map(sin(millis() + 124), -1, 1, 255, 0);
+    fill(r, g, b);
+    
+    arc(width/2,height/2,width*1.5,height*1.5,0+(frameCount/2),45+(frameCount/2));
+    arc(width/2,height/2,width*1.5,height*1.5,90+(frameCount/2),135+(frameCount/2));
+    arc(width/2,height/2,width*1.5,height*1.5,180+(frameCount/2),225+(frameCount/2));
+    arc(width/2,height/2,width*1.5,height*1.5,270+(frameCount/2),315+(frameCount/2));
+    noStroke();
+
+};
+var home = function() {
+    noStroke();
+    var r = map(sin(millis() * 0.5), -1, 1, 0, 255);
+    var g = map(sin((millis() * 0.8) + 87), -1, 1, 100, 200);
+    var b = map(sin(millis() + 124), -1, 1, 255, 0);
+    background1();
+    textSize(60);
+    fill(255, 255, 255);
+    text("Colorblox", 201, 34);
+    fill(0, 0, 0);
+    textSize(20);
+    text("A PLATFORMER © KA Overlords.", 201, 73);
+    fill(0, 0, 0, 100);
+    noStroke();
+    rect(0, 121, 400, 248);
+    fill(255, 255, 255, 200);
+    if (drawButton("Play", 112, 133, 170, 50) === "click") {
+        gameState = "Play";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("Level Select", 112, 216, 170, 50, 26) === "click") {
+        gameState = "Levels";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("Customize", 112, 300, 170, 50, 26) === "click") {
+        gameState = "Character";
+    }
+    textSize(18);
+    textSize(30);
+    fill(r, g, b);
+    text("Version " + version, 305, 93);
+    textSize(30);
+};
+var play = function() {
+    
+    frameRate(100);
+    textAlign(LEFT, CENTER);
+    background2();
+    popMatrix();
+    levels.apply();
+    noStroke();
+    fill(255, 255, 255);
+    if (drawButton("Shop", 70, -5, 90, 40, 18) === "click") {
+        gameState = "Shop";
+    }
+    fill(255, 0, 255, tp);
+    rect(0, 0, width, height);
+};
+var shop = function() {
+    background2();
+    fill(255, 255, 255);
+    textAlign(CENTER, CENTER);
+    textSize(50);
+    text("Shop", 200, 40);
+
+    fill(50, 50, 50);
+    textAlign(RIGHT, BOTTOM);
+    textSize(20);
+    text("$" + playerCoins, 390, 390);
+    fill(255, 255, 255);
+    if (drawButton("[$15] Lives +1", 10, 100, 190, 40, 18) === "click") {
+        if (playerCoins >= 15) {
+            playSound(sounds.coin);
+            lives++;
+            playerCoins -= 15;
+        }
+    }
+    fill(255, 255, 255);
+    if (drawButton("[$5] Health +10", 10, 150, 190, 40, 18) === "click") {
+        if (playerCoins >= 5) {
+            playSound(sounds.coin);
+            players[0].health += 10;
+            playerCoins -= 5;
+        }
+    }
+
+    if (drawButton("Back", 10, height - 50, 100, 40, 20) === "click") {
+        gameState = "Play";
+    }
+};
+var died = function() {
+    var v = map(sin(millis() * 0.1), -1, 1, 10, 30);
+    colorMode(HSB);
+    background(v, 200, 255);
+    colorMode(RGB);
+
+    textAlign(CENTER, TOP);
+    fill(50, 50, 50);
+
+    textSize(40);
+    text("You died.", width / 2, (height / 2) - 100);
+
+    textSize(30);
+    text("Press restart to try again!", width / 2, (height / 2) + 50);
+};
+var won = function() {
+    var v = map(sin(millis() * 0.02), -1, 1, 0, 255);
+
+    colorMode(HSB);
+    background(v, 200, 255);
+    colorMode(RGB);
+
+    textAlign(CENTER, TOP);
+    fill(50, 50, 50);
+
+    textSize(40);
+    text("You've finished\nall the levels!", width / 2, (height / 2) - 100);
+
+    textSize(30);
+    text("If you want, you can\ncreate your own\nlevels, too!", width / 2, (height / 2) + 50);
+};
+var characterCust = function() {
+    background1();
+    fill(200, 50, 50);
+
+    textAlign(CENTER, CENTER);
+    textSize(30);
+    text("Character Customization", 200, 20);
+
+    fill(70, 70, 70);
+    textSize(20);
+    textAlign(RIGHT, TOP);
+    text("Color: ", 90, 97);
+    text("Gender: ", 90, 137);
+    text("Eyes: ", 90, 177);
+    text("Mouth: ", 90, 217);
+
+    colorMode(HSB);
+    for (var i = 0; i < 255; i++) {
+        if (mouse[LEFT] && mouseX > 100 && mouseX < 355 && mouseY > 100 && mouseY < 120) {
+            characterHue = constrain(mouseX - 100, 0, 255);
+        }
+        stroke(i, 255, 255);
+        line(i + 100, 100, i + 100, 120);
+    }
+    colorMode(RGB);
+
+    noStroke();
+    fill(50, 50, 50);
+    rect(98 + characterHue, 98, 4, 24);
+    fill(255, 255, 255, 200);
+    if (drawButton("Male", 100, 135, 120, 30, 18) === "click") {
+        characterGender = "male";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("Female", 235, 135, 120, 30, 18) === "click") {
+        characterGender = "female";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("Default", 100, 175, 78, 30, 18) === "click") {
+        characterEyes = "default";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("None", 188, 175, 78, 30, 18) === "click") {
+        characterEyes = "none";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("Evil", 275, 175, 78, 30, 18) === "click") {
+        characterEyes = "evil";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("None", 100, 215, 78, 30, 18) === "click") {
+        characterMouth = "none";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("Simple", 188, 215, 78, 30, 18) === "click") {
+        characterMouth = "simple";
+    }
+    fill(255, 255, 255, 200);
+    if (drawButton("Evil", 275, 215, 78, 30, 18) === "click") {
+        characterMouth = "evil";
+    }
+
+    noStroke();
+
+    drawCharacter((width / 2) - 15, 300, 30, 30);
+    fill(255, 255, 255);
+    if (drawButton("Back", 10, height - 50, 100, 40, 20) === "click") {
+        gameState = "Menu";
+    }
+};
+var levelSelect = function() {
+    background1();
+    fill(255, 255, 255);
+    textSize(40);
+    text("Level Select", 200, 35);
+
+    for (var i = 0; i < levels.levels.length; i++) {
+        var x = ((i * 50) % 400) + 5;
+        var y = (floor(i / 8) * 50) + 115;
+        fill(255, 255, 255);
+        if (drawButton(i + 1, x, y, 40, 40, 18) === "click") {
+            obj.remove();
+            levels.level = i;
+            levels.loadMap();
+            gameState = "Play";
+        }
+    }
+    fill(166, 166, 166);
+    if (drawButton("Back", 10, height - 50, 100, 40, 20) === "click") {
+        gameState = "Menu";
+    }
+};
+var draw = function() {
+    logoTime++;
+    aa+=0.02;
+    if(logoTime < 200) {
+        background(0, 0, 0);
+        for(var j = 0; j < stars.length; j++) {
+            noStroke();
+            fill(255, 255, 255);
+            stars[j].starMover();
+            stars[j].drawStar();
+        }
+        pushMatrix();
+        translate(200,200);
+        scale(aa,aa);
+        if(drawNodes) {
+            drawNodes();
+        }
+        if(drawEdges) {
+            drawEdges();
+        }
+        if(!mouseIsPressed) {
+            rotateXY(1);
+            rotateXZ(2);
+            rotateYZ(3);
+        }
+        popMatrix();
+        textFont(createFont("Tahoma"));
+        textSize(101);
+        textAlign(CENTER,CENTER);
+        fill(255, 255, 255);
+        text("Atomic\nFission",201,201);
+    }
+    if(logoTime>200){
+    textFont(createFont("cursive"));
+    cursor();
+    switch (gameState) {
+        case "Menu":
+            home();
+            break;
+        case "Lose":
+            died();
+            break;
+        case "Shop":
+            shop();
+            break;
+        case "Win":
+            won();
+            break;
+        case "Play":
+            play();
+            break;
+        case "Levels":
+            levelSelect();
+            break;
+        case "Character":
+            characterCust();
+            break;
+    }
+    mousePress = [];
+    }
+};
