@@ -1,0 +1,1553 @@
+/*
+
+New level added!
+
+This comment is by Elijah.
+All credit for this game belongs to RaghavCS and KA overlords, profile here:
+
+https://www.khanacademy.org/computer-programming/ka-overlords/5995767821107200. 
+
+I made a few levels with his level creater program and wanted to play it so i added to this game. They are marked in the code. I also removed sound to reduce lag, added in the Users Levels, and removed the character customization becuase it did not work.
+
+if you want to add your own levels in feel free. Use "Kaadmy (KA Overlords)" level builder (or just click on create level button). once you have a level, copy the level code (the thing that prints out when you click enter), and paste it in the level function of this game. Then save a spin off of this game and i will add in your level, unless you say in your comments that you dont want me to. I will give you the proper cedit.
+
+Comments will show you where to place your level.
+
+*/
+
+// let me know if you finish level 14! It is hard!!
+
+
+
+/******************************************
+ * Red & Blue - KA Overlords (RaghavCS, Kaadmy, King Abdullah, Virus)
+ *
+ * Please do not plagiarize or uncredit in some sort of way that disappeals to me.
+ * 
+ * NOT A RIPOFF of Cubix! It's different!
+ *****************************************************
+ * Credits:
+ * - Kaadmy for new graphics, turrets, and teleporters. You can find his profile here: https://www.khanacademy.org/profile/Kaadmy/programs
+ 
+ * - Ryan Kee for collision testing obj API, and level construction. You can find his profile here: https://www.khanacademy.org/profile/RaZiire/programs
+ 
+ * - Thomas L for camera function. You can find his profile here: https://www.khanacademy.org/profile/voidx/programs
+ ****************************************************/
+var version = "Elijah";
+var gameState = "Menu";
+var tp = 0;
+var exiting = 0;
+var playerCoins = 0;
+var lives = 3;
+var screenColor = [255,0,0];
+/** removed Sound**/
+/**Keys**/
+var keys = [];
+var keyPressed = function(){
+    keys[keyCode] = true;
+};
+var keyReleased = function(){
+    keys[keyCode] = false;
+};
+/**Mouse**/
+var mouse = [];
+var mousePress=[];
+var mousePressed = function(){
+    mouse[mouseButton] = true;
+    mousePress[mouseButton]=true;
+};
+var mouseReleased = function(){
+    mouse[mouseButton]=false;
+};
+/**Buttons**/
+var drawButton = function(txt, x, y, w, h, ts) {
+    ts=ts||30;
+    var v="none";
+    
+    if(mouseX > x && mouseY > y && mouseX < x+w && mouseY < y+h) {
+        cursor(HAND);
+        if(mousePress[LEFT]) {
+            v="click";
+        } else {
+            v="hover";
+        }
+    } 
+    var s=map(sin(millis()*0.5), -1, 1, 2, 20);
+    
+    if(v === "hover") {
+        fill(100, 100, 100, 150);
+        noStroke();
+        rect(x-(s/2), y-(s/2), w+s, h+s, 10+(s*0.5));
+        fill(255, 255, 255);
+    }
+    
+    stroke(255, 255, 255, 200);
+    strokeWeight(5);
+    rect(x, y, w, h, 10);
+    
+    fill(40, 40, 40);
+    textAlign(CENTER, CENTER);
+    textSize(ts);
+    text(txt, x+(w/2), y+(h/2));
+    
+    noStroke();
+    fill(200, 200, 200, 80);
+    var stripeX=(millis()*0.24)%(w*8)-30;
+    if(stripeX < w) {
+        rect(constrain(x+stripeX, x, x+w), y, constrain(w-stripeX, 0, 30)-constrain(-stripeX, 0, 30), h);
+    }
+
+    return(v);
+};
+/**Collisions**/
+var collide = function(obj1,obj2){
+    return( obj1.x<obj2.x+obj2.w&&obj1.x+obj1.w>obj2.x&&
+            obj1.y<obj2.y+obj2.h&&obj1.y+obj1.h>obj2.y);
+};
+/**Camera (Credit to Thomas L for this**/
+var Camera = function(x, y, w, h, cameraX, cameraY, levelWidth, levelHeight, speed){
+    this.x = x;
+    this.y = y;
+    this.w  = w;
+    this.h = h;
+    this.cameraX = cameraX;
+    this.cameraY = cameraY;
+    this.levelWidth = levelWidth;
+    this.levelHeight = levelHeight;
+    this.speed = this.speed || speed; // the lower the number, the faster the speed
+    Camera.prototype.follow = function(ent) {
+        var x = -ent.x+this.x+(this.w/2)-(ent.w/2);
+        var y = -ent.y+this.y+(this.h/2)-(ent.h/2);
+        var a = atan2(y-this.cameraY, x-this.cameraX);
+        var v = dist(x, y, this.cameraX, this.cameraY) / this.speed;
+        this.cameraX += v*cos(a);
+        this.cameraY += v*sin(a);
+        var width  = this.x + this.w  - this.levelWidth;
+        var height = this.y + this.h - this.levelHeight;
+        this.cameraX = min(this.cameraX, this.x);
+        this.cameraX = max(this.cameraX, width);
+        this.cameraY = min(this.cameraY, this.y);
+        this.cameraY = max(this.cameraY, height);
+    };
+    Camera.prototype.view = function(ent) {
+        var cameraX = -this.cameraX+this.x,
+            cameraY = -this.cameraY+this.y,
+            cameraWidth = ent.w-this.w,
+            cameraHeight = ent.w-this.h;
+
+        if(ent.x >  cameraX-ent.w &&
+            ent.x <  cameraX-cameraWidth+ent.w && 
+            ent.y >  cameraY-ent.h &&
+            ent.y <  cameraY-cameraHeight+ent.h){
+                var camView = {
+                    x: (this.cameraX+ent.x),
+                    y: (this.cameraY+ent.y),
+                    w: ent.w,
+                    h: ent.h,
+                    cam: this
+        };
+        
+        return camView;
+    }
+};
+};
+/**Player**/
+var drawCharacter=function(x, y, w, h) {
+    var characterHue=130; // 0-255
+    var characterGender="male"; // male, female
+    var characterMouth="none"; // none, simple, evil
+    var characterEyes="default"; // none, default, evil
+    pushMatrix();
+    translate(x, y);
+    
+    colorMode(HSB);
+    fill(characterHue, 255, 255);
+    colorMode(RGB);
+
+    if(characterGender === "male") {
+        rect(0, 0, w, h, 3);
+    } else {
+        rect(w*0.05, 0, w*0.9, h, 6);
+    }
+    
+    var blink=constrain(map(sin(millis()*0.05), -1, 1, 0, 2000), 0, 1);
+
+    pushMatrix();
+    translate(w/2, 4);
+    scale(1, blink);
+
+    if(characterEyes === "default") {
+        fill(50);
+        rect(-10, 0, 5, 8);
+        rect(5, 0, 5, 8);
+    } else if(characterEyes === "evil") {
+        fill(150, 0, 0);
+        rect(-8, 0, 3, 8);
+        rect(5, 0, 3, 8);
+    }
+
+    popMatrix();
+    
+    if(characterMouth === "simple") {
+        fill(50);
+        rect((w/2)-5, h*0.7, 10, 4);
+    } else if(characterMouth === "evil") {
+        fill(150, 0, 0);
+        rect((w/2)-2, h*0.74, 4, 2);
+    }
+
+    popMatrix();
+};
+var Player = function(x,y,w,h,keyInputs,col){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    
+    this.keyInputs = keyInputs;
+    this.color = color;
+    
+    this.xVEL = 0;
+    this.yVEL = 0;
+    
+    this.maxSpeed = 3;
+    this.accel = 0.25;
+    
+    this.jumping = false;
+    this.jSpeed = 8;
+    this.gravity = 0.4;
+    
+    this.health = 100;
+    this.lastDamage=100;
+    this.dead = false;
+    this.spawn={
+        x:this.x,
+        y:this.y
+    };
+    this.deathCounter = 0;
+    
+    this.lightIntensity = 200;
+    this.particles=[];
+    
+    this.lastTele=Infinity;
+    
+    this.color=col;
+    Player.prototype.damage=function(amt) {
+        if(this.lastDamage > 30) {
+            this.health-=amt;
+            this.lastDamage=0;
+        }
+    };
+    Player.prototype.heal=function(amt) {
+        this.health+=amt;
+        this.lastDamage=0;
+    };
+    Player.prototype.update = function(blocks){
+        this.lastTele+=5;
+        this.lastDamage++;
+        if(!this.dead){
+            if(keys[this.keyInputs[0]]){
+                this.xVEL+=this.accel;
+            }
+            if(keys[this.keyInputs[1]]){
+                this.xVEL-=this.accel;
+            }
+        
+            if(keys[this.keyInputs[2]]&&!this.jumping){
+                this.yVEL=-this.jSpeed;
+                this.jumping=true;
+            }
+        
+            if(!keys[this.keyInputs[0]]&&!keys[this.keyInputs[1]]){
+                if(this.xVEL>0){
+                    this.xVEL-=this.accel;
+                }
+                if(this.xVEL<0){
+                    this.xVEL+=this.accel;
+                }
+            }
+        
+            if(Math.abs(this.xVEL)>this.maxSpeed){
+                if(this.xVEL>0){
+                    this.xVEL=this.maxSpeed;
+                }
+                if(this.xVEL<0){
+                    this.xVEL=-this.maxSpeed;
+                }
+        }
+    
+            this.x+= this.xVEL;
+            this.applyCollision(blocks,this.xVEL,0);
+        
+            this.jumping = true;
+            this.y+= this.yVEL;
+            this.applyCollision(blocks,0,this.yVEL);
+            this.yVEL+= this.gravity;
+        }
+    
+        if(this.y > 400) {
+            this.health-=5;
+        }
+    
+        if(this.health <= 0) {
+            this.dead = true;
+        }
+    
+        if(this.dead){
+            this.deathCounter++;
+            if(this.deathCounter>100){
+                this.x=this.spawn.x;
+                this.y=this.spawn.y;
+                this.deathCounter=0;
+                this.dead=false;
+                this.health=100;
+                lives--;
+                if(lives <= 0) {
+                    gameState="Lose"; // dummy state for testing
+                }
+            }
+        }
+};
+    Player.prototype.applyCollision = function(obj,velx,vely){
+        for(var i=0; i<obj.length; i++){
+            if(collide(this,obj[i])){
+                if(vely>0){
+                    this.yVEL = 0;
+                    this.jumping = false;
+                    this.y = obj[i].y-this.h;
+                }
+                if(vely<0){
+                    this.yVEL = 0;
+                    this.jumping = true;
+                    this.y = obj[i].y+obj[i].h;
+                }
+                if(velx<0){
+                    this.xVEL = 0;
+                    this.x = obj[i].x+obj[i].w;
+                }
+                if(velx>0){
+                    this.xVEL = 0;
+                    this.x = obj[i].x-this.w;
+                }
+            }
+    }
+};
+    Player.prototype.draw = function(cam,blocks) {
+        var view = cam.view(this);
+        if(view && !this.dead && ((this.lastDamage < 30 && frameCount%5 <= 1) || this.lastDamage > 30)){
+            noStroke();
+            
+            drawCharacter(view.x, view.y, view.w, view.h);
+
+            this.particles.length = 0; // (comment from Kaadmy) from what I understand, saying this.particles.length=0 does NOTHING. you should do this.particles=[] to remove them.
+        }
+        else if(view&&this.dead){
+            if(this.particles.length<20){
+                this.particles.push(
+                    {
+                        x:view.x+view.w/2,
+                        y:view.y+view.h/2,
+                        w:view.w/10,
+                        h:view.h/10,
+                        velx:random(-2,2),
+                        vely:-3,
+                        gravity:0.4,
+                        angle:random(-90,-270),
+                        color:this.color
+                    }
+                );
+            }
+        
+        noStroke();
+        for(var i = 0; i<this.particles.length; i++){
+            var p = this.particles[i];
+            fill(p.color);
+            rect(p.x,p.y,p.w,p.h);
+            
+            p.x+=p.velx;
+            p.y+=p.vely;
+            p.vely+=p.gravity;
+            
+            for(var b = 0; b<blocks.length; b++){
+                if(collide(p,blocks[b])){
+                    if(p.vely>0){
+                        p.vely--;
+                        p.vely =-p.vely;
+                    }
+                }
+            }
+        }
+    }
+};
+    Player.prototype.stats = function(){
+        noStroke();
+
+        fill(230, 70, 70);
+        rect(-10, -10, 80, 55, 10);
+        fill(230, 210, 70);
+        rect(160, -10, 80, 55, 10);
+        fill(70, 230, 70);
+        rect(330, -10, 80, 55, 10);
+
+        textAlign(CENTER, CENTER);
+        textSize(18);
+
+        fill(50, 50, 50);
+
+        textSize(18);
+        text(max(0, this.health), 35, 30);
+        text(playerCoins, 200, 30);
+        text(lives, 365, 30);
+
+        textSize(14);
+        text("Health", 35, 10);
+        text("Coins", 200, 10);
+        text("Lives", 365, 10);
+    };
+};
+var players = [];
+players.attachToGame = function(x,y,w,h,keyInputs,color){
+    players.push(new Player(x,y,w,h,keyInputs,color));
+};
+players.apply = function(blocks,cam){
+    for(var i = 0; i<players.length; i++){
+        players[i].update(blocks);
+        players[i].draw(cam,blocks);
+        players[i].stats();
+    }
+};
+/**Block**/
+var Block = function(x,y,w,h,color){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.color = color;
+    Block.prototype.draw = function(cam) {
+        var view = cam.view(this);
+    
+        if(view){
+            noStroke();
+            
+            fill(0, 100, 200);
+            rect(view.x,view.y,view.w,view.h);
+            
+            fill(100, 180, 250);
+            triangle(view.x+2, view.y+2, view.x+10, view.y+2, view.x+2, view.y+10);
+
+            fill(0, 80, 180);
+            rect((view.x+(view.w/2))-4, (view.y+(view.h/2))-4, 8, 8);
+        }
+};
+};
+var blocks = [];
+blocks.attachToGame = function(x,y,w,h,color){
+    blocks.push(new Block(x,y,w,h,color));
+};
+blocks.apply = function(cam){
+    for(var i = 0; i<blocks.length; i++){
+        blocks[i].draw(cam);
+    }
+};
+/**Coin**/
+var Coin = function(x,y,w,h){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    Coin.prototype.update = function(coins, id, players){
+        for(var i = 0; i<players.length; i++){
+            if(collide(this, players[i]) && !players[i].dead){
+                coins.splice(id, 1);
+                playerCoins++;
+                players[i].health+=5;
+                return(1);
+            }
+        }
+        return(0);
+    };
+    Coin.prototype.draw = function(cam) {
+        var view = cam.view(this);
+    
+        if(view){
+            noStroke();
+            
+            pushMatrix();
+            translate(view.x+(view.w/2), view.y+(view.h/2));
+            
+            scale(sin(millis()*0.3), 1);
+            
+            fill(230, 210, 70);
+            ellipse(0, 0, view.w*0.75, view.h*0.75);
+
+            var w=view.w*0.55;
+            var h=view.h*0.55;
+
+            fill(250, 240, 120);
+            arc(0, 0, w, h, 15, 75);
+            arc(0, 0, w, h, 135, 185);
+            arc(0, 0, w, h, 245, 305);
+
+            fill(200, 180, 50);
+            arc(0, 0, w, h, -55, 15);
+            arc(0, 0, w, h, 75, 135);
+            arc(0, 0, w, h, 185, 245);
+
+            popMatrix();
+        }
+    };
+};
+var coins = [];
+coins.attachToGame = function(x,y,w,h){
+    coins.push(new Coin(x,y,w,h));
+};
+coins.apply = function(coins, cam){
+    for(var i = 0; i<coins.length; i++){
+        coins[i].draw(cam);
+        i-=coins[i].update(coins, i, players);
+    }
+};
+/**Turrets**/
+var Bullet = function(x, y, w, h, xVEL, yVEL) {
+    this.sx=x; // original position
+    this.sy=y;
+    
+    this.x=x;
+    this.y=y;
+    this.w=w;
+    this.h=h;
+
+    this.xVEL=xVEL;
+    this.yVEL=yVEL;
+};
+Bullet.prototype.update = function(bullets, id, players, lavas) {
+    this.x+=this.xVEL;
+    this.y+=this.yVEL;
+    
+    if(dist(this.x, this.y, this.sx, this.sy) > 480) {
+        bullets.splice(id, 1);
+        return(1);
+    }
+    
+    for(var i=0;i<lavas.length;i++) {
+        if(collide(this, lavas[i])) {
+            return(1);
+        }
+    }
+
+    for(var i=0;i<players.length;i++) {
+        if(collide(this, players[i]) && !players[i].dead) {
+            players[i].damage(20);
+            return(1);
+        }
+    }
+    return(0);
+};
+Bullet.prototype.draw = function(cam) {
+    var view = cam.view(this);
+    
+    if(view){
+        noStroke();
+        fill(50, 50, 50);
+        ellipse(view.x, view.y, view.w, view.h);
+    }
+};
+var Turret = function(x,y,w,h){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    
+    this.a=0;
+
+    this.bullets=[];
+    this.lastShot=1000;
+    Turret.prototype.update = function(cam, players, lavas) {
+        this.lastShot++;
+        for(var i=0;i<players.length;i++) {
+            if(dist(players[i].x, players[i].y, this.x, this.y) <  120) { // 4 blocks
+                this.a=270+atan2(players[i].y-this.y, players[i].x-this.x);
+                if(this.lastShot > 80) {
+                    this.bullets.push(new Bullet(this.x+(this.w/2), this.y+(this.h/2), this.w/4, this.h/4,
+                        -sin(this.a)*1.5, cos(this.a)*1.5));
+                    this.lastShot=0;
+                }
+            } else {
+                this.a=0;
+            }
+        }
+        for(var j=0;j<this.bullets.length;j++) {
+            this.bullets[j].draw(cam);
+            j-=this.bullets[j].update(this.bullets, j, players, lavas);
+        }
+    };
+    Turret.prototype.draw = function(cam) {
+        var view = cam.view(this);
+    
+        if(view){
+            noStroke();
+            fill(255, 50, 0);
+            ellipse(view.x+(view.w/2), view.y+(view.h/2), view.w, view.h);
+
+            pushMatrix();
+            translate(view.x+(view.w/2), view.y+(view.h/2));
+            rotate(this.a);
+            strokeWeight(7);
+            stroke(50, 50, 50);
+            line(0, 7, 0, 15);
+            
+            popMatrix();
+
+            noStroke();
+            fill(50, 255, 255);
+            ellipse(view.x+(view.w/2), view.y+(view.h/2), view.w/2, view.h/2);
+        }
+    };
+};
+var turrets = [];
+turrets.attachToGame = function(x,y,w,h){
+    turrets.push(new Turret(x,y,w,h));
+};
+turrets.apply = function(cam, players, lavas){
+    for(var i = 0; i<turrets.length; i++){
+        turrets[i].update(cam, players, lavas);
+        turrets[i].draw(cam);
+    }
+};
+/**Lava**/
+var lava = function(x,y,w,h){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    lava.prototype.update = function(players){
+        for(var i = 0; i<players.length; i++){
+            if(collide(this,players[i])&&!players[i].dead){
+                players[i].vely =- players[i].jumpHeight;
+                players[i].damage(30);
+            }
+        }
+    };
+    lava.prototype.draw = function(cam) {
+        var view = cam.view(this);
+    
+        if(view){
+            colorMode(HSB);
+            var h=(sin(millis()*0.15)*12)+12;
+
+            fill(h, 255, 255);
+            colorMode(RGB);
+            rect(view.x,view.y,view.w,view.h);
+        }
+    };
+};
+var lavas = [];
+lavas.attachToGame = function(x,y,w,h){
+    lavas.push(new lava(x,y,w,h));
+};
+lavas.apply = function(cam){
+    for(var i = 0; i<lavas.length; i++){
+        lavas[i].update(players);
+        lavas[i].draw(cam);
+    }
+};
+/**Teleport**/
+var Tele = function(x,y,w,h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    Tele.prototype.update = function(teles, id, cam, players) {
+        var possibleTeles=[];
+        for(var i=0;i<teles.length;i++) {
+            if(i !== id) {
+                possibleTeles.push(teles[i]);
+            }
+        }
+        
+        var r=floor(random(0, possibleTeles.length-0.01));
+        var randomTele=possibleTeles[r];
+        
+        for(var i = 0;i<players.length;i++) {
+            if(collide(this, players[i]) && players[i].lastTele >= 500 && !players[i].dead) {
+                players[i].lastTele=0;
+
+                players[i].x=randomTele.x;
+                players[i].y=randomTele.y;
+
+                players[i].xVEL=0;
+                players[i].yVEL=0;
+
+            }
+        }
+    };
+    Tele.prototype.draw = function(cam) {
+        var view = cam.view(this);
+    
+        if(view){
+            stroke(200, 50, 200);
+            strokeWeight(2);
+            
+            var s=sin(millis()*0.2)*(view.h/2)+(view.h/2);
+            line(view.x, view.y+s, view.x+view.w, view.y+s);
+            s=cos(millis()*0.3)*(view.h/2)+(view.h/2);
+            line(view.x, view.y+s, view.x+view.w, view.y+s);
+        }
+};
+};
+var teles = [];
+teles.attachToGame = function(x,y,w,h){
+    teles.push(new Tele(x,y,w,h));
+};
+teles.apply = function(cam, players){
+//    debug(teles);
+    for(var i = 0; i<teles.length; i++){
+        teles[i].update(teles, i, cam, players);
+        teles[i].draw(cam);
+    }
+};
+/**Portal (End)**/
+var Portal = function(x,y,w,h){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.complete = false;
+    Portal.prototype.update = function(players){
+        screenColor = [255,255,255];
+        for(var i=0;i<players.length;i++){
+            if(collide(this, players[i]) && exiting === 0){
+                exiting=1;
+            }
+        }
+    };
+    Portal.prototype.draw= function(cam,players) {
+        var view = cam.view(this);
+    
+        if(view){
+            stroke(0, 200, 100);
+            strokeWeight(3);
+            fill(0, 200, 100, 50);
+
+            ellipseMode(CENTER);
+            
+            pushMatrix();
+            translate(view.x+(view.w/2), view.y+(view.h/2));
+            rotate(millis()*0.1);
+            scale(sin(millis()*0.2), 1);
+            ellipse(0, 0, view.w, view.h);
+            popMatrix();
+
+            pushMatrix();
+            translate(view.x+(view.w/2), view.y+(view.h/2));
+            rotate(millis()*0.10);
+            scale(1, cos(millis()*0.2));
+            ellipse(0, 0, view.w, view.h);
+            popMatrix();
+        }
+    };
+};
+var end = [];
+end.attachToGame = function(x,y,w,h){
+    end.push(new Portal(x,y,w,h));
+};
+end.apply = function(cam,players){
+    for(var i = 0; i<end.length; i++){
+        end[i].update(players);
+        end[i].draw(cam,players);
+    }
+};
+/**OBJ Amplifier**/
+var obj = [players, blocks, lavas, teles, coins, turrets, end];
+obj.remove=function(){
+    for(var i=0;i<obj.length;i++){
+        for(var j=0;j<obj[i].length;j++){
+            obj[i].splice(j, obj[i].length);
+        }
+    }
+};
+
+/**Levels**/
+
+var PLevels=function(){
+    var characterHue=130; // 0-255
+    var characterGender="male"; // male, female
+    var characterMouth="none"; // none, simple, evil
+    var characterEyes="default"; // none, default, evil
+    this.levels = [
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "         #    #            ",
+            "T P   AAAAAAAAAA@         T",
+            "###########################"
+        ],
+        
+        [
+            "    AAA$A                  ",
+            "    AA@TA                  ",
+            "    AAA#A                  ",
+            "AAAAAAAAA                  ",
+            "      $                    ",
+            " ::  $#T$TTT:              ",
+            "    $#:T#T$TA              ",
+            "TT$T#AT$:$#$T              ",
+            "AA#$TT$#T#:#T              ",
+            "TTT#T$#:$$TTT              ",
+            "PT$$$#AA##:TT              ",
+            "#T###A#A#A#:#              ",
+            "AAAAAAAAAAAAA              ",
+            "###########################"
+        ],
+        
+        
+    ];
+    this.level = 0;
+    this.levelsWidth = [800,400];
+    this.levelsHeight = [400,400];
+    this.cam = new Camera(0,0,width,height,0,0,this.levelsWidth[this.level],this.levelsHeight[this.level],8);
+    PLevels.prototype.loadMap = function(){
+        for(var col = 0; col<this.levels[this.level].length; col++){
+            for(var row = 0; row<this.levels[this.level][col].length; row++){
+                var txt = this.levels[this.level][col][row];
+                if(txt === "P"){
+                    colorMode(HSB);
+                    players.attachToGame(row*30,col*30,30,30,[RIGHT,LEFT,UP,DOWN], color(characterHue, 255, 255));
+                    colorMode(RGB);
+                } else if(txt === "#"){
+                    blocks.attachToGame(row*30,col*30,30,30,color(20, 20, 20));
+                } else if(txt === "$"){
+                    coins.attachToGame(row*30,col*30,30,30);
+                } else if(txt === ":"){
+                    turrets.attachToGame(row*30,col*30,30,30);
+                } else if(txt === "A"){
+                    lavas.attachToGame(row*30,col*30,30,30);
+                } else if(txt === "T"){
+                    teles.attachToGame(row*30,col*30,30,30);
+                } else if(txt === "@"){
+                    end.attachToGame(row*30,col*30,30,30);
+                }
+            }   
+        }
+    };
+PLevels.prototype.apply = function(){
+    this.cam.follow(players[0]);
+    
+    blocks.apply(this.cam);
+    coins.apply(coins, this.cam, players);
+    turrets.apply(this.cam, players, lavas);
+    lavas.apply(this.cam, players);
+    teles.apply(this.cam, players);
+    end.apply(this.cam, players);
+
+    var exited=false;
+    
+    if(exiting === 1) {
+        tp+=5;
+        if(tp > 255) {
+            tp=255;
+            exiting=2;
+            exited=true;
+        }
+    } else if(exiting === 2) {
+        tp-=10;
+        if(tp < 0) {
+            tp=0;
+            exiting=0;
+        }
+    }
+    
+    if(exited){
+        this.level++;
+        obj.remove();
+        if(this.level >= this.levels.length) {
+            this.level=0;
+            gameState="Win";
+        }
+        this.loadMap();
+    }
+
+    players.apply(blocks,this.cam);
+};
+};
+var Plevels = new PLevels();
+//Plevels.loadMap();
+
+
+
+
+
+//Paste your level code in here
+
+var Levels = function(){
+    var characterHue=130; // 0-255
+    var characterGender="male"; // male, female
+    var characterMouth="none"; // none, simple, evil
+    var characterEyes="default"; // none, default, evil
+    this.levels = [
+        //Paste your code here
+        //below here
+        
+        
+        
+        
+        
+        //above here
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                      @    ",
+            "                      #    ",
+            "    :                      ",
+            "    #                    ##",
+            "    #         $  $     $$  ",
+            "P  T#T   $#   #  #  #  ##  ",
+            "######AAA##AAA#  #AA#      ",
+            "###############  ######    "
+        ],
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                        ###",
+            "                         T#",
+            "#T                       ##",
+            "##                        #",
+            "#P    A$  A$  A$  A$ :A$ @#",
+            "###########################"
+        ],
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                         @ ",
+            "                         # ",
+            "                       #   ",
+            "                    #      ",
+            "                 #         ",
+            "              #            ",
+            "           #               ",
+            "        #                  ",
+            "P    #                     ",
+            "###                        "
+        ],
+        [
+            "                           ",
+            "          @                ",
+            "         ###               ",
+            "              $            ",
+            "             ###           ",
+            "          $                ",
+            "         ###               ",
+            "              $            ",
+            "             ###           ",
+            "          $                ",
+            "         ###               ",
+            "                           ",
+            "P            ###           ",
+            "###########################"
+        ],
+        [
+            "                ###        ",
+            "               :#T#        ",
+            "               T#@#        ",
+            "          $   #####        ",
+            "          #                ",
+            "      #                    ",
+            "                           ",
+            "        ##                 ",
+            "           $               ",
+            "           ##  :           ",
+            "               ##   $      ",
+            "                   ##    P ",
+            "                       ####",
+            "                           "
+        ],
+        [
+            "                           ",
+            "          @    :           ",
+            "         ###   #       #   ",
+            "             $$$    #      ",
+            "             ###           ",
+            "           #               ",
+            "   ### $$            #     ",
+            "       ##                  ",
+            "           #        #      ",
+            "                #          ",
+            "               ###         ",
+            "              #####        ",
+            "P            ########      ",
+            "###########################"
+        ],  
+        [
+            "                           ",
+            "   @   $     :  T          ",
+            "   #   #A#    ###   #    ##",
+            "         :  $$         ##  ",
+            "       #  #A##             ",
+            "                 $         ",
+            "               #A#         ",
+            "                     #     ",
+            "                   $       ",
+            "                   # # #   ",
+            "              #            ",
+            "          $$$      # # #   ",
+            "P       # ### ###         T",
+            "###########################"
+        ],
+        [
+            "       @                   ",
+            "       #  #                ",
+            "               #           ",
+            "                   #       ",
+            "                       T   ",
+            "                       #   ",
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "                           ",
+            "             ##  T         ",
+            "            #    # #       ",
+            "          #A#         #    ",
+            "                    #      ",
+            "P       #####    #         ",
+            "########     ##############"
+        ],
+        [
+            "T                          ",
+            "A                          ",
+            "A             #          # ",
+            "A                   #      ",
+            "A         #               T",
+            "                          #",
+            "              #            ",
+            "                  ##       ",
+            "T  AAAAAAAAAAAAAAAAAAA     ",
+            "                       ###T",
+            "@#                        #",
+            "##                   #     ",
+            "P                       #  ",
+            "####  #  #  #   #   #      "
+        ],
+        
+        
+        //My personal levels
+        
+        
+        [
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            ":::::::::::::::::::::::::::",
+            ":::::::::::::::::::::::::::",
+            ":::::::::::::::::::::::::::",
+            ":::::::::::::::::::::::::: ",
+            "::::::::::::::::::::::::: $",
+            "::::::::::::::::::::::::  @",
+            "::::::::::::::::::::::: $$#",
+            "#:::::::::::::::::::::  $# ",
+            "#:::::::::::::::::::: $$#  ",
+            "#:::::::::::::::::::  $#   ",
+            "#AAAAAAAAAAAAAAAAAA $$#    ",
+            "#AP$$$ $$$ $$$ $$$ $$#     ",
+            "###########################"
+        ],
+        
+        [
+            "                     ::    ",
+            "                    T#:    ",
+            "                   $ #:    ",
+            "                 $$ $#:    ",
+            "                 $# #      ",
+            "                $#         ",
+            "             $ $#          ",
+            "            $# #          @",
+            "           $# A           #",
+            "::::::   $ #  A     $  #   ",
+            "::::::   #A         #      ",
+            "::###  #A A      #         ",
+            ":#P   # A     T            ",
+            "###########################"
+        ],
+        
+        [
+            "A  $           A  ####    @",
+            "A  #$          A#     A#  #",
+            "A ###   : AT$$$$$#      #$A",
+            "A A# #     #$$$$$ #$     TA",
+            "A A#  #$   $$$$$$  A#     A",
+            "A A#  ###  $A$$$$  A #    A",
+            "A A$:    # $A$$$$     A#  A",
+            "  A#       #A#T          ##",
+            "  A#      # #          $#: ",
+            "  #      #       $    $#   ",
+            "$A#    #     #A#A#A:  #    ",
+            ":$#   # #   #      ###     ",
+            ":T#P ##    # #             ",
+            "###########################"
+        ],
+        [
+            "#:::::::             ##A: @",
+            "#AA#AAA:             #AA $#",
+            "#AT$#A################A $$#",
+            "###$##AAAAAAAAAAAAAAAAA $#A",
+            "#AA$AAA     :      :   $$A#",
+            "#  $    $$$$$$$$$$$$$$$$#A#",
+            "#AA   $$$$$$$$$$$$$$$$$$A #",
+            ":A   $ #A#A# # #  # #A#AA #",
+            "#A  $#A#A   A A AA A A A A#",
+            "#A$ # A#A A A A$  $A$A A  #",
+            "#$#$  A#AA A A A$$A A A A #",
+            "#AA#  A#A $     AA       A#",
+            "#AA P A#A$T$  :$$$$  :    #",
+            "###########################"
+        ],
+        
+        //Bonus level (not mine)
+        [
+            "TTTTTTTTTTTTTTTTTTTTTTTTTTT",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$#",
+            "PTTTTTTTTTTTTTTTTTTTTTTTTT@",
+            "###########################",
+        ],
+        
+        //mine again
+        [
+            "#TT    A     $T$T$T$T$T$T:#",
+            "#$$   T#T    TAA$T$$T$T$T:#",
+            "#$$   #T#    TAAT$T$T######",
+            "#$$  ##A##   TAA$T$T##T  A#",
+            "#$$  T#A#T   TAAT$T# T#AAA#",
+            "#TT  ##@##   TAA$T#T$#T$$$#",
+            "#$$   A#A    TAAT$T#AT# # #",
+            "#$$  T#A#T   TAAT$#T$#T$A$#",
+            "#$$  #  $#   TAAT$T# T#A :#",
+            "#$$  #P $#   TAAT$T ##$ A##",
+            "#$$   #T#    TAAT$$T$$#T#T#",
+            "#$$    #     TAAT$AAAAT#$$#",
+            "#TT T T T T TAAAA$$$$T#T$##",
+            "###########################"
+        ],
+        
+        
+    ];
+    this.level = 0;
+    this.levelsWidth = [800,400];
+    this.levelsHeight = [400,400];
+    this.cam = new Camera(0,0,width,height,0,0,this.levelsWidth[this.level],this.levelsHeight[this.level],8);
+    Levels.prototype.loadMap = function(){
+        for(var col = 0; col<this.levels[this.level].length; col++){
+            for(var row = 0; row<this.levels[this.level][col].length; row++){
+                var txt = this.levels[this.level][col][row];
+                if(txt === "P"){
+                    colorMode(HSB);
+                    players.attachToGame(row*30,col*30,30,30,[RIGHT,LEFT,UP,DOWN], color(characterHue, 255, 255));
+                    colorMode(RGB);
+                } else if(txt === "#"){
+                    blocks.attachToGame(row*30,col*30,30,30,color(20, 20, 20));
+                } else if(txt === "$"){
+                    coins.attachToGame(row*30,col*30,30,30);
+                } else if(txt === ":"){
+                    turrets.attachToGame(row*30,col*30,30,30);
+                } else if(txt === "A"){
+                    lavas.attachToGame(row*30,col*30,30,30);
+                } else if(txt === "T"){
+                    teles.attachToGame(row*30,col*30,30,30);
+                } else if(txt === "@"){
+                    end.attachToGame(row*30,col*30,30,30);
+                }
+            }   
+        }
+    };
+Levels.prototype.apply = function(){
+    this.cam.follow(players[0]);
+    
+    blocks.apply(this.cam);
+    coins.apply(coins, this.cam, players);
+    turrets.apply(this.cam, players, lavas);
+    lavas.apply(this.cam, players);
+    teles.apply(this.cam, players);
+    end.apply(this.cam, players);
+
+    var exited=false;
+    
+    if(exiting === 1) {
+        tp+=5;
+        if(tp > 255) {
+            tp=255;
+            exiting=2;
+            exited=true;
+        }
+    } else if(exiting === 2) {
+        tp-=10;
+        if(tp < 0) {
+            tp=0;
+            exiting=0;
+        }
+    }
+    
+    if(exited){
+        this.level++;
+        obj.remove();
+        if(this.level >= this.levels.length) {
+            this.level=0;
+            gameState="Win";
+        }
+        this.loadMap();
+    }
+
+    players.apply(blocks,this.cam);
+};
+};
+
+// right in there^^^^^^^^
+
+
+
+var levels = new Levels();
+levels.loadMap();
+/**Each Screen*/
+var home = function(){
+    var r = map(sin(millis()*0.5), -1, 1, 0, 255);
+    var g = map(sin((millis()*0.8)+87), -1, 1, 100, 200);
+    var b = map(sin(millis()+124), -1, 1, 255, 0);
+    var c1 = [color(255,0,0),color(0,255,255)];
+    var c2 = [color(255,0,0),color(0,255,255)];
+    var c = 0;
+    var c3 = true;
+    if(c3){
+        c++;
+        if(c>=254){c3 = false;}
+    }
+    if(!c3){
+        c--;
+        if(c<=1){c3 = true;}
+    }
+    c2[0] = lerpColor(c1[0],c1[1],c);
+    c2[1] = lerpColor(c1[1],c1[0],c);
+    noStroke();
+    for(var i=0;i<400;i+=5){
+        fill(lerpColor(c2[0],c2[1],i/400));
+        rect(0,i,400,5);
+    }
+    textSize(60);
+    
+    pushMatrix();
+    translate(100, 70);
+    rotate(-10);
+    pushMatrix();
+    scale(0.9);
+    fill(50, 50, 50);
+    text("Red", 0, 0);
+    popMatrix();
+    fill(255, 0, 0);
+    text("Red", 0, 0);
+    popMatrix();
+    
+    pushMatrix();
+    translate(300, 50);
+    rotate(2);
+    pushMatrix();
+    scale(0.9);
+    fill(50, 50, 50);
+    text("Blue", 0, 0);
+    popMatrix();
+    fill(0, 255, 255);
+    text("Blue", 0, 0);
+    popMatrix();
+    
+    fill(255, 255, 255);
+    text("&", width/2, 70);
+    
+    fill(0, 0, 0);
+    textSize(43);
+    text("by", 165, 152);
+    fill(0,0,0,100);
+    rect(0, 121, 400, 65);
+    fill(0, 255, 255);
+    if(drawButton("Play", 7, 260, 170, 50) === "click"){
+        gameState = "Play";
+    }
+    fill(255, 0, 0);
+    if(drawButton("Level Select", 218, 260, 170, 50, 26) === "click"){
+        gameState = "Levels";
+    }
+    fill(255, 0, 0);
+    if(drawButton("Users Levels", 218, 322, 170, 50, 26) === "click"){
+        gameState = "Pselect";
+    }
+    fill(255, 0, 0);
+    fill(255, 0, 0);
+    if(drawButton("👑", 211, 128, 50, 50, 26) === "click"){
+        println("Elijah's Program's https://www.khanacademy.org/profile/elijahno/programs");
+    }
+    fill(0, 255, 255);
+    if(drawButton("Create Level", 7, 322, 170, 50, 26) === "click"){
+        println("To create a level, go here: https://www.khanacademy.org/computer-programming/redblue-level-creator/4667703065444352\n see the comments in my code for more info.");   
+    }
+    textSize(18);
+    fill(255, 255, 255);
+    text("All credit goes to Red & Blue © KA Overlords.", 218, 388);
+    textSize(30);
+    fill(r, g, b);
+    text("Version "+version, 305,93);
+    textSize(40);
+    text("Add your own code in!", 201, 216);
+};
+var play = function(){
+    textAlign(LEFT,CENTER);
+    background(120, 120, 120);
+    stroke(82, 82, 82);
+    strokeWeight(3);
+    line(0, 50, 100, 50);
+    line(100, 50, 100, 200);
+    line(100, 200, 300, 200);
+    line(300, 200, 300, 400);
+    line(400, 270, 0, 270);
+    line(0, 350, 200, 350);
+    line(180, 350, 180, 0);
+    noFill();
+    rect(100, 245, 100, 39);
+    rect(50, 100, 30, 59);
+    rect(300, 50, 86, 39);
+    rect(290, 260, 37, 47);
+    rect(166, 82, 90, 58);
+    rect(37, 190, 93, 107);
+    rect(137, 324, 93, 107);
+    ellipse(228, 324, 37, 36);
+    ellipse(167, 135, 37, 36);
+    ellipse(28, 300, 37, 36);
+    ellipse(302, 55, 37, 36);
+    ellipse(296, 205, 37, 36);
+    ellipse(83, 92, 37, 36);
+    fill(255, 0, 0);
+    noStroke();
+    fill(255, 255, 255, 20);
+    pushMatrix();
+    rotate(61);
+    translate(0, -110);
+    rect(0, 0, 800, 50);
+    rect(0, 70, 800, 20);
+    popMatrix();
+    levels.apply();
+    noStroke();
+    fill(255, 0, 0);
+    if(drawButton("Shop", 70, -5, 90, 40, 18) === "click"){
+        gameState="Shop";
+    }
+    fill(255, 0, 255, tp);
+    rect(0, 0, width, height);
+};
+var Pplay = function(){
+    textAlign(LEFT,CENTER);
+    background(120, 120, 120);
+    stroke(82, 82, 82);
+    strokeWeight(3);
+    line(0, 50, 100, 50);
+    line(100, 50, 100, 200);
+    line(100, 200, 300, 200);
+    line(300, 200, 300, 400);
+    line(400, 270, 0, 270);
+    line(0, 350, 200, 350);
+    line(180, 350, 180, 0);
+    noFill();
+    rect(100, 245, 100, 39);
+    rect(50, 100, 30, 59);
+    rect(300, 50, 86, 39);
+    rect(290, 260, 37, 47);
+    rect(166, 82, 90, 58);
+    rect(37, 190, 93, 107);
+    rect(137, 324, 93, 107);
+    ellipse(228, 324, 37, 36);
+    ellipse(167, 135, 37, 36);
+    ellipse(28, 300, 37, 36);
+    ellipse(302, 55, 37, 36);
+    ellipse(296, 205, 37, 36);
+    ellipse(83, 92, 37, 36);
+    fill(255, 0, 0);
+    noStroke();
+    fill(255, 255, 255, 20);
+    pushMatrix();
+    rotate(61);
+    translate(0, -110);
+    rect(0, 0, 800, 50);
+    rect(0, 70, 800, 20);
+    popMatrix();
+    Plevels.apply();
+    noStroke();
+    fill(255, 0, 0);
+    if(drawButton("Shop", 70, -5, 90, 40, 18) === "click"){
+        gameState="Shop";
+    }
+    fill(255, 0, 255, tp);
+    rect(0, 0, width, height);
+};
+var shop = function(){
+    background(240, 130, 130);
+    fill(200, 50, 50);
+    
+    textAlign(CENTER, CENTER);
+    textSize(50);
+    text("Shop", 200, 40);
+
+    fill(50, 50, 50);
+    textAlign(RIGHT, BOTTOM);
+    textSize(20);
+    text("$"+playerCoins, 390, 390);
+    fill(255, 0, 0);
+    if(drawButton("[$15] Lives +1", 10, 100, 190, 40, 18) === "click") {
+        if(playerCoins >= 15) {
+            lives++;
+            playerCoins-=15;
+        }
+    }
+    fill(0, 255, 255);
+    if(drawButton("[$5] Health +10", 10, 150, 190, 40, 18) === "click") {
+        if(playerCoins >= 5) {
+            players[0].health+=10;
+            playerCoins-=5;
+        }
+    }
+
+    if(drawButton("Back", 10, height-50, 100, 40, 20) === "click") {
+        gameState="Play";
+    }
+};
+var died = function(){
+    var v = map(sin(millis()*0.1), -1, 1, 10, 30);
+    colorMode(HSB);
+    background(v, 200, 255);
+    colorMode(RGB);
+    
+    textAlign(CENTER, TOP);
+    fill(50, 50, 50);
+    
+    textSize(40);
+    text("You died.", width/2, (height/2)-100);
+    
+    textSize(30);
+    text("Press restart to try again!", width/2, (height/2)+50);
+};
+var won = function(){
+    var v = map(sin(millis()*0.02), -1, 1, 0, 255);
+                
+    colorMode(HSB);
+    background(v, 200, 255);
+    colorMode(RGB);
+    
+    textAlign(CENTER, TOP);
+    fill(50, 50, 50);
+    
+    textSize(40);
+    text("You've finished\nall the levels!", width/2, (height/2)-100);
+    
+    textSize(30);
+    text("If you want, you can\ncreate your own\nlevels, too!", width/2, (height/2)+50);
+};
+var PSelect = function(){
+    
+    
+    background(20, 180, 230);
+
+    fill(200, 50, 50);
+    textSize(40);
+    text("Level Select", 200, 35);
+    textSize(18);
+    text("Warning! some of these levels are exremely hard!",25,40,350,100);
+    
+    for(var i=0;i<Plevels.levels.length;i++) {
+        var x=((i*50)%400)+5;
+        var y=(floor(i/8)*50)+115;
+        fill(255, 0, 0);
+        if(drawButton(i+1, x, y, 40, 40, 18) === "click") {
+            obj.remove();
+            Plevels.level=i;
+            Plevels.loadMap();
+            gameState="PPlay";
+        }
+    }
+    fill(0, 255, 255);
+    if(drawButton("Back", 10, height-50, 100, 40, 20) === "click") {
+        gameState="Menu";
+    }
+
+};
+var levelSelect = function(){
+    background(20, 180, 230);
+
+    fill(200, 50, 50);
+    textSize(40);
+    text("Level Select", 200, 35);
+    
+    for(var i=0;i<levels.levels.length;i++) {
+        var x=((i*50)%400)+5;
+        var y=(floor(i/8)*50)+115;
+        fill(255, 0, 0);
+        if(drawButton(i+1, x, y, 40, 40, 18) === "click") {
+            obj.remove();
+            levels.level=i;
+            levels.loadMap();
+            gameState="Play";
+        }
+    }
+    fill(0, 255, 255);
+    if(drawButton("Back", 10, height-50, 100, 40, 20) === "click") {
+        gameState="Menu";
+    }
+};
+var draw = function(){
+    textFont(createFont("cursive"));
+    cursor();
+        switch(gameState) {
+            case "Menu":
+                home();
+            break;
+            case "Lose":
+                died();
+            break;
+            case "Shop":
+                shop();
+            break;
+            case "Win":
+                won();
+            break;
+            case "Play":
+                play();
+            break;
+            case "PPlay":
+                Pplay();
+            break;
+            case "Levels":
+                levelSelect();
+            break;
+            case "Pselect":
+                PSelect();
+            break;
+        }
+        mousePress=[];
+};
