@@ -1,0 +1,240 @@
+/**
+
+    Red&Blue level creator
+    
+    Left-click cycles through blocks
+    Right-click clears block
+    Middle-click makes block into a solid block.
+    Enter prints
+
+**/
+
+// vvvvv PRINT LEVEL, THEN PASTE IT HERE, THEN SAVE AS A SPIN-OFF vvvvv
+var level=[
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "                           ",
+    "P @ $ : T A                ",
+    "###########################",
+];
+
+var blockSize=30;
+
+var cameraPan=0;
+
+var keysPress=[];
+var keys=[];
+var mouse=[];
+
+var blocks={
+    " ": "#",
+    "#": "A",
+    "A": "$",
+    "$": ":",
+    ":": "P",
+    "P": "T",
+    "T": "@",
+    "@": " "
+};
+
+var drawBlock=function(type, x, y, w, h) {
+    switch(type) {
+        case "P":
+            noStroke();
+
+            pushMatrix();
+            translate(x, y);
+
+            fill(20, 240, 190);
+            rect(0, 0, w, h, 4);
+            
+            fill(50);
+            
+            var blink=constrain(map(sin(millis()*0.1), -1, 1, 0, 2000), 0, 8);
+            
+            rect((w/2)-10, 4, 5, blink);
+            rect((w/2)+5, 4, 5, blink);
+            
+            popMatrix();
+
+            break;
+        case "#":
+            noStroke();
+
+            fill(0, 100, 200);
+            rect(x, y, w, h);
+            
+            fill(100, 180, 250);
+            triangle(x+2, y+2, x+10, y+2, x+2, y+10);
+
+            fill(0, 80, 180);
+            rect((x+(w/2))-4, (y+(h/2))-4, 8, 8);
+            break;
+        case ":":
+            noStroke();
+            fill(255, 50, 0);
+            ellipse(x+(w/2), y+(h/2), w, h);
+
+            pushMatrix();
+            translate(x+(w/2), y+(h/2));
+            strokeWeight(7);
+            stroke(50, 50, 50);
+            line(0, 7, 0, 15);
+            
+            popMatrix();
+
+            noStroke();
+            fill(50, 255, 255);
+            ellipse(x+(w/2), y+(h/2), w/2, h/2);
+            break;
+        case "A":
+            noStroke();
+
+            colorMode(HSB);
+            var e=(sin(millis()*0.15)*12)+12;
+
+            fill(e, 255, 255);
+            colorMode(RGB);
+            rect(x, y, w, h);
+            break;
+        case "$":
+            noStroke();
+            
+            pushMatrix();
+            translate(x+(w/2), y+(h/2));
+            
+            scale(sin(millis()*0.3), 1);
+            
+            fill(230, 210, 70);
+            ellipse(0, 0, w*0.75, h*0.75);
+
+            w*=0.55;
+            h*=0.55;
+
+            fill(250, 240, 120);
+            arc(0, 0, w, h, 15, 75);
+            arc(0, 0, w, h, 135, 185);
+            arc(0, 0, w, h, 245, 305);
+
+            fill(200, 180, 50);
+            arc(0, 0, w, h, -55, 15);
+            arc(0, 0, w, h, 75, 135);
+            arc(0, 0, w, h, 185, 245);
+
+            popMatrix();
+            break;
+        case "T":
+            stroke(200, 50, 200);
+            strokeWeight(2);
+            
+            var s=sin(millis()*0.2)*(h/2)+(h/2);
+            line(x, y+s, x+w, y+s);
+            s=cos(millis()*0.3)*(h/2)+(h/2);
+            line(x, y+s, x+w, y+s);
+            break;
+        case "@":
+            stroke(0, 200, 100);
+            strokeWeight(3);
+            fill(0, 200, 100, 50);
+
+            ellipseMode(CENTER);
+            
+            pushMatrix();
+            translate(x+(w/2), y+(h/2));
+            rotate(millis()*0.1);
+            scale(sin(millis()*0.2), 1);
+            ellipse(0, 0, w, h);
+            popMatrix();
+
+            pushMatrix();
+            translate(x+(w/2), y+(h/2));
+            rotate(millis()*0.10);
+            scale(1, cos(millis()*0.2));
+            ellipse(0, 0, w, h);
+            popMatrix();
+            break;
+    }
+};
+
+var printLevel=function() {
+    var out="";
+    
+    out+="[";
+    for(var i=0;i<level.length;i++) {
+        out+="\n    \""+level[i]+(i===level.length-1?"\"":"\",");
+    }
+    out+="\n],";
+    
+    println(out);
+};
+
+var draw=function() {
+    if(keysPress[ENTER]) { // space
+        printLevel();
+    }
+    
+    if(keys[LEFT] && cameraPan < 0) {
+        cameraPan+=5;
+    }
+    if(keys[RIGHT] && cameraPan > width-(27*blockSize)) {
+        cameraPan-=5;
+    }
+    
+    background(200);
+
+    pushMatrix();
+    translate(cameraPan, 0);
+    for(var i=0;i<level.length;i++) {
+        for(var j=0;j<level[i].length;j++) {
+            var x=j*blockSize;
+            var y=i*blockSize;
+            
+            drawBlock(level[i][j], x, y, blockSize, blockSize);
+
+            if(mouseX > x+cameraPan && mouseY > y && mouseX < (x+cameraPan)+blockSize && mouseY < y+blockSize) {
+                noStroke();
+                fill(100, 100, 100, 100);
+                rect(x, y, blockSize, blockSize);
+                if(mouse[RIGHT]) {
+                    var l=level[i].substr(0, j)+" "+level[i].substr(j+1, level[i].length);
+                    
+                    level[i]=l;
+                } else if(mouse[CENTER]) {
+                    var l=level[i].substr(0, j)+"#"+level[i].substr(j+1, level[i].length);
+                    
+                    level[i]=l;
+                } else if(mouse[LEFT]) {
+                    var c=blocks[level[i][j]];
+                    var l=level[i].substr(0, j)+c+level[i].substr(j+1, level[i].length);
+                    
+                    level[i]=l;
+                }
+            }
+        }
+    }
+    popMatrix();
+    
+    keysPress=[];
+    mouse=[];
+};
+
+var keyPressed=function() {
+    keys[keyCode]=true;
+    keysPress[keyCode]=true;
+};
+var keyReleased=function() {
+    keys[keyCode]=false;
+};
+
+var mousePressed=function() {
+    mouse[mouseButton]=true;
+};
