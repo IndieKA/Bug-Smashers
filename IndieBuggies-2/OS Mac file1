@@ -1,0 +1,1272 @@
+/***************************
+ * The credits section: (People's things I used.)
+ * Nate, for redesigning the program. :)
+ * Triveri for the slider.
+ ************************************************************
+ * When making an app, follow these rules:
+ * 1. Make sure the app doesn't exceed over 600 lines of code.
+ * 2. Make the game a good game, something that isn't boring!
+ * 3. DO NOT SPACE YOUR PROGRAM. 
+ ************************************************************
+ * Updates: 
+ * - Added slider and app function
+ * - Added time and date function
+ * - Added page switch function
+ * - Added user-sent apps
+ * - Added mountain background
+ * RECODE 1: Added new textures, and better details.
+ * - Added home button
+ * - Added new apps
+ * RECODE 2: Deleted useless apps, fixed background, made code formattable.
+ * - Made new slider
+ * TODO:
+ * - Add apps on dock pad
+ * - Add SIRI
+ * - Add app thumbnails
+ * - Add default apps (Settings, Calculator, etc) 
+ * - Add 'delete apps'
+ * - Add dragging apps
+ */
+var activated = false;
+/***/
+var dd = day();
+var mm = month();
+var yy = year();
+/**iPad Vars*/
+angleMode = "degrees";
+var particles = 50;
+var currentPowerRatio = 0;
+var powerRatio = 0.3;
+var flock = false;
+var i = 0;
+var imgImages = [
+    getImage("avatars/leaf-blue"),
+    getImage("avatars/leaf-green"),
+    getImage("avatars/leaf-grey"),
+    getImage("avatars/leaf-orange"),
+    getImage("avatars/leaf-red"),
+    getImage("avatars/leaf-yellow"),
+];
+var randomArray = [];
+var randomIncr = 0;
+var randomSamples = particles*1;
+var p = 2;
+for(randomIncr = 0; randomIncr < randomSamples; randomIncr++) {
+    randomArray[randomIncr] = floor(
+        random(0, 1)*pow(10, p)
+    )/pow(10, p);
+}
+var rNum = function() {
+    return ++randomIncr >= randomArray.length ? 
+        randomArray[randomIncr=0] : 
+            randomArray[randomIncr];
+};
+var rRnge = function(start, stop) {
+    return rNum()*(stop-start)+start;
+};
+var img = function() {
+    this.x = rRnge(0, width);
+    this.y = rRnge(0, height);
+    this.radius = rRnge(15, 50);
+    this.vx = rRnge(-1, 1);
+    this.vy = rRnge(-1, 1);
+    
+    this.img = imgImages[floor(rRnge(-1, imgImages.length-1)+1)];
+    this.rotate = 0;
+    this.rotateOffset = rRnge(38, 42);
+    
+    this.ax = random(
+        this.vx < 0 ? -0.1 : 0, 
+        this.vx > 0 ? 0.1 : 0
+    );
+    this.ay = random(
+        this.vy < 0 ? -0.1 : 0, 
+        this.vy > 0 ? 0.1 : 0
+    );
+    
+    this.maxSpeed = rRnge(15, 20);
+    this.dist = 0;
+    this.updateVectors = function() {
+        this.vx += this.ax;
+        this.vy += this.ay;
+        
+        this.x += this.vx;
+        this.y += this.vy;
+    };
+    
+    this.collisionBoundaries = function() {
+        if(this.x + this.radius*2 < 0 && this.vx < 0) {
+            this.x = width + this.radius;
+        }
+        if(this.x - this.radius*2 > width && this.vx > 0) {
+            this.x = -this.radius;
+        }
+        if(this.y + this.radius*2 < 0 && this.vy < 0) {
+            this.y = height + this.radius;
+        }
+        if(this.y - this.radius*2 > height && this.vy > 0) {
+            this.y = -this.radius;
+        }
+    };
+    
+    this.changeDirection = function() {
+        if(this.vx > this.maxSpeed) {
+            this.vx = this.maxSpeed;
+            this.ax += random(
+                -0.2, 
+                0.1
+            );
+            this.maxSpeed = 5*rNum() + 15;
+        } else if(this.vx < -this.maxSpeed) {
+            this.vx = -this.maxSpeed;
+            this.ax += random(
+                -0.1,
+                0.2
+            );
+            this.maxSpeed = 5*rNum() + 15;
+        }
+        if(this.vy > this.maxSpeed) {
+            this.vy = this.maxSpeed;
+            this.ay += random(
+                -0.2,
+                0.1
+            );
+            this.maxSpeed = 5*rNum() + 15;
+        } else if(this.vy < -this.maxSpeed) {
+            this.vy = -this.maxSpeed;
+            this.ay += random(
+                -0.1,
+                0.2
+            );
+            this.maxSpeed = 5*rNum() + 15;
+        }
+    };
+    
+    this._anchor = function(x, y, strengthRatio) {
+        this.vx += strengthRatio * (x - this.x);
+        this.vy += strengthRatio * (y - this.y);
+    };
+    
+    this.update = function() {
+        this.updateVectors();
+        this.changeDirection();
+        
+        this.dist = dist(mouseX, mouseY, this.x, this.y);
+        this.collisionBoundaries();
+        // Rotate img towards the direction
+        this.rotate = atan2(this.vy, this.vx) + 
+            this.rotateOffset;
+    };
+    
+    this.draw = function() {
+        pushMatrix();
+        //fill(this.color);
+        translate(this.x, this.y);
+        rotate(this.rotate);
+        image(
+            this.img,
+            0,
+            0,
+            this.radius * 1,
+            this.radius * 1
+        );
+        popMatrix();
+    };
+};
+var img_array = [];
+for(i = 0; i < particles; i++) {
+    img_array[i] = new img();
+}
+var on = true;
+var lock = true;
+var mouseClick = false;
+var openApp = "safari";
+var Scr = 0;
+var NOScr = false;
+var isTwoDigits = function(num) {
+    return floor(abs(num)).toString().length === 2;
+};
+var mouseIn = function(x, y, w, h) {
+    if(mouseX > x && mouseY > y && mouseX < x + w && mouseY < y + h) {
+        return true;
+    } else {
+        return false;
+    }
+};
+var homePressed = function() {
+    if(mouseIn(185, 365, 30, 30) && mouseIsPressed) {
+        return true;
+    } else {
+        return false;
+    }
+};
+var desktime = 0;
+var slider = function(x, y, w, max) {
+    var value = 0;
+    if(mouseX > x && mouseX < x + w && mouseY > y - 10 && mouseY < y + 10 && mouseIsPressed) {
+        value = mouseX - x;
+        value = constrain(value, 0, w);
+    }
+    strokeWeight(3);
+    strokeCap(ROUND);
+    strokeJoin(ROUND);
+    stroke(200);
+    line(x, y, x + w, y);
+    stroke(25, 150, 255);
+    line(x, y, x + value, y);
+    for(var shadow = 0; shadow < 5; shadow++) {
+        fill(0, 0, 0, 10);
+        noStroke();
+        ellipse(x + value, y + shadow, 20, 20);
+    }
+    stroke(200);
+    fill(255);
+    strokeWeight(1);
+    ellipse(x + value, y, 20, 20);
+    return round(value / w * max);
+};
+var toggle = function(x, y) {
+    var animate = 0;
+    animate = constrain(animate, 0, 25);
+    var value = false;
+    fill(255);
+    if(mouseIsPressed && mouseX > x - 20 && mouseX < x + 45 && mouseY > y - 10 && mouseY < y + 10) {
+        animate = mouseX - x;
+        animate = constrain(animate, 0, 25);
+    }
+
+    strokeWeight(5 + animate / 2);
+    stroke(200 - animate * 3, 200 + animate * 2, 200 - animate * 3);
+    line(x, y, x + 25, y);
+    for(var shadow = 0; shadow < 5; shadow++) {
+        fill(0, 0, 0, 10);
+        noStroke();
+        ellipse(x + animate, y + shadow, 20, 20);
+    }
+    strokeWeight(1);
+    stroke(200);
+    fill(255);
+    ellipse(x + animate, y, 20, 20);
+    if(animate < 25) {
+        animate -= 5;
+        value = false;
+    } else {
+        animate += 5;
+        value = true;
+    }
+    return value;
+};
+var apps = [{
+        color: [255, 0, 0],
+        name: "Platformer"
+    }, {
+        color: [166, 0, 255],
+        name: "Painter"
+    }, {
+        color: [0],
+        name: "XY Graph"
+    }, {
+        color: [255, 213, 0],
+        name: "Space Path"
+    }, {
+        color: [0, 255, 255],
+        name: "ColorFlap"
+    }
+
+];
+var bckScr = -10;
+frameCount = 0;
+var KHANFLICT = (function() {
+    /**
+     * Khanflict utility for Khan Academy
+     * (c) 2015 JPG2000
+     * This code is released under standard and current KA license
+     * Used for iPad
+     **/
+    var dat = {};
+    var callbacks = {
+        draw: [],
+        mouseClicked: [],
+        mousePressed: [],
+        mouseReleased: [],
+        mouseMoved: [],
+        mouseDragged: [],
+        mouseOver: [],
+        mouseOut: [],
+        keyPressed: [],
+        keyReleased: [],
+        keyTyped: []
+    };
+
+    var initCallbackSetter = function(cbid) {
+        Object.defineProperty(dat, cbid, {
+            set: function(v) {
+                if (typeof v === "function") {
+                    callbacks[cbid].push(v);
+                } else if (typeof v.call === "function") {
+                    callbacks[cbid].push(v.call);
+                } else {
+                    println("Oh noes! Invalid callback provided for " + cbid + "! Please use only functions and objects with a call function!");
+                }
+            }
+        });
+    };
+
+    (function() {
+        var callbackNames = Object.keys(callbacks);
+        for (var i = 0; i < callbackNames.length; i++) {
+            initCallbackSetter(callbackNames[i]);
+        }
+    })();
+
+    draw = function() {
+        if (!this.loadPixels) {
+            return;
+        }
+        for (var i = 0; i < callbacks.draw.length; i++) {
+            callbacks.draw[i]();
+        }
+    };
+
+    mouseClicked = function() {
+        for (var i = 0; i < callbacks.mouseClicked.length; i++) {
+            callbacks.mouseClicked[i]();
+        }
+    };
+
+    mousePressed = function() {
+        for (var i = 0; i < callbacks.mousePressed.length; i++) {
+            callbacks.mousePressed[i]();
+        }
+    };
+
+    mouseReleased = function() {
+        for (var i = 0; i < callbacks.mouseReleased.length; i++) {
+            callbacks.mouseReleased[i]();
+        }
+    };
+
+    mouseMoved = function() {
+        for (var i = 0; i < callbacks.mouseMoved.length; i++) {
+            callbacks.mouseMoved[i]();
+        }
+    };
+
+    mouseDragged = function() {
+        for (var i = 0; i < callbacks.mouseDragged.length; i++) {
+            callbacks.mouseDragged[i]();
+        }
+    };
+
+    mouseOver = function() {
+        for (var i = 0; i < callbacks.mouseOver.length; i++) {
+            callbacks.mouseOver[i]();
+        }
+    };
+
+    mouseOut = function() {
+        for (var i = 0; i < callbacks.mouseOut.length; i++) {
+            callbacks.mouseOut[i]();
+        }
+    };
+
+    keyPressed = function() {
+        for (var i = 0; i < callbacks.keyPressed.length; i++) {
+            callbacks.keyPressed[i]();
+        }
+    };
+
+    keyReleased = function() {
+        for (var i = 0; i < callbacks.keyReleased.length; i++) {
+            callbacks.keyReleased[i]();
+        }
+    };
+
+    keyTyped = function() {
+        for (var i = 0; i < callbacks.keyTyped.length; i++) {
+            callbacks.keyTyped[i]();
+        }
+    };
+
+
+    return dat;
+})();
+var keys = [];
+var keyPressed = function() {
+    keys[keyCode] = true;
+};
+var keyReleased = function() {
+    keys[keyCode] = false;
+};
+var mouseIn = function(x, y, w, h) {
+    if (mouseX > x && mouseY > y && mouseX < x + w && mouseY < y + h) {
+        return true;
+    } else {
+        return false;
+    }
+};
+var bckgrnd = function(clr, app) {
+
+    colorMode(RGB);
+    fill(clr);
+    if (!app) {
+        rect(0, 0, width, height);
+    } else {
+        rect(0, 0, app.width, app.height);
+    }
+};
+var geo = {
+    megaNot: function(ky, list) {
+        var bool = true;
+        for (var i = 0; i < list.length; i++) {
+            if (ky === list[i]) {
+                bool = false;
+            }
+        }
+        return bool;
+    },
+    radius: 0,
+    stroke: 0.5,
+    colorFn: function() {
+        if (this.stroke > 0) {
+            strokeWeight(this.stroke);
+        } else {
+            noStroke();
+        }
+        if (typeof this.strokeColor === "number") {
+            stroke(this.strokeColor);
+        }
+        if ((typeof this.fillColor) === "number") {
+            fill(this.fillColor);
+        }
+        if (typeof this.strokeColor === "number") {
+            stroke(this.strokeColor);
+        }
+
+    },
+    nLine: function(gPoint1, gPoint2, color) {
+        this.colorFn();
+        if (color) {
+            stroke(color);
+        }
+        line(gPoint1[0], gPoint1[1], gPoint2[0], gPoint2[1]);
+    },
+    nQuad: function(gPoint1, gPoint2, gPoint3, gPoint4) {
+        this.colorFn();
+        quad(gPoint1[0], gPoint1[1], gPoint2[0], gPoint2[1], gPoint3[0], gPoint3[1], gPoint4[0], gPoint4[1]);
+    },
+    nRect: function(gPoint1, gPoint2, txt, txtSize) {
+        this.colorFn();
+        rect(gPoint1[0], gPoint1[1], abs(gPoint1[0] - gPoint2[0]), abs(gPoint1[1] - gPoint2[1]));
+        if (txt) {
+            fill(txt[1] || 0);
+            if (txtSize) {
+                textSize(txtSize);
+            }
+            textAlign(CENTER, TOP);
+            text(txt[0], gPoint1[0], gPoint1[1], abs(gPoint1[0] - gPoint2[0]), abs(gPoint1[1] - gPoint2[1]));
+        }
+    },
+    nTri: function(gPoint1, gPoint2, gPoint3) {
+        this.colorFn();
+        this.nQuad(gPoint1, gPoint2, gPoint3, gPoint1);
+    }
+
+};
+var WINDOWSTORAGE;
+var windows = [];
+frameRate(80);
+var window = function(config) {
+    windows.unshift(this);
+
+    this.winX = config.winX || 20;
+    this.winY = config.winY || 20;
+    this.wid = config.wid || 180;
+    this.hei = config.hei || 180;
+    this.btnSize = config.btnSize || 20;
+    this.check = function(y) {
+        var a = "";
+        if (this.paused.minimized === false) {
+            this.windowSelected = mouseX >= this.winX && mouseY >= this.winY && (mouseX < (this.winX + this.wid)) && (mouseY < (this.winY + this.hei + this.btnSize));
+            this.bottomWinSelected = mouseX >= this.winX + 3 && mouseY >= this.winY + this.btnSize && mouseX < (this.winX + this.wid - 6) && mouseY < (this.winY + this.hei - this.btnSize);
+            var c = this.windowSelected && (!this.bottomWinSelected);
+            switch (y) {
+                case 1:
+                    a = this.windowSelected;
+                    break;
+                case 2:
+                    a = this.bottomWinSelected;
+                    break;
+                default:
+                    a = c;
+                    break;
+            }
+        } else {
+            a = false;
+        }
+        return a;
+    };
+    this.selected = false;
+    this.format = config.format || function() {
+        fill(255, 0, 0, 180);
+    };
+    this.runtimes = 0;
+    this.variables = {};
+    this.yar = function(varName, value) {
+        this.variables[varName] = value;
+    };
+    this.defaultDraw = function() {
+        var winX = this.winX || 20;
+        var winY = this.winY || 20;
+        var wid = this.wid || 180;
+        var hei = this.hei || 180;
+        var btnSize = this.btnSize || 20;
+        var txtArr = [null, ["×", 255],
+            ["▧", 255], "-"
+        ];
+        var formatBtn = function(x, o) {
+            switch (x) {
+                case 1:
+                    fill(91, 91, 252, 105);
+                    break;
+                case 2:
+                    fill(72, 240, 74, 105);
+                    break;
+                case 3:
+                    fill(255, 255, 0, 105);
+                    break;
+            }
+            textSize(17);
+            if (!o) {
+                geo.nRect([wid - btnSize * x + (winX), winY], [wid - btnSize * (x - 1) + (winX), winY + btnSize], txtArr[x]);
+            } else {
+                geo.nRect([wid - btnSize * x + (winX), o], [wid - btnSize * (x - 1) + (winX), o + btnSize], txtArr[x]);
+            }
+        };
+        for (var _btns = 1; _btns < 4; _btns++) {
+            if (mouseIn(this.wid - this.btnSize * _btns + (this.winX), this.winY, this.btnSize, this.btnSize) && mouseIsPressed) {
+                switch (_btns) {
+                    case 3:
+                        this.paused.minimized = true;
+                        break;
+                    case 2:
+                        this.paused.maximized = !this.paused.maximized;
+                        if (this.paused.maximized) {
+                            this.paused.wid = this.wid;
+                            this.paused.hei = this.hei;
+                            this.paused.winX = this.winX;
+                            this.paused.winY = this.winY;
+                            this.wid = min(width - this.btnSize, height - this.btnSize * 2);
+                            this.hei = this.wid;
+                            this.winX = (width - this.wid) / 2;
+                            this.winY = 0;
+                        } else {
+                            this.wid = this.paused.wid;
+                            this.hei = this.paused.hei;
+                            this.winX = this.paused.winX;
+                            this.winY = this.paused.winY;
+                        }
+                        break;
+                    case 1:
+                        this.paused.minimized = true;
+                        this.variables = {};
+                        this.runtimes = 0;
+                        break;
+                }
+            }
+
+        }
+        winX = this.winX || 20;
+        winY = this.winY || 20;
+        wid = this.wid || 180;
+        hei = this.hei || 180;
+        btnSize = this.btnSize || 20;
+        if (this.paused.maximized === true) {
+            this.format();
+            geo.nRect([winX, 0], [winX + wid, 0 + hei + btnSize + btnSize]);
+            formatBtn(1, -this.btnSize / (10 * height / 400));
+            formatBtn(2, -this.btnSize / (10 * height / 400));
+            formatBtn(3, -this.btnSize / (10 * height / 400));
+        } else {
+            this.format();
+            geo.nRect([winX, winY], [winX + wid, winY + hei + btnSize + btnSize]);
+            formatBtn(1);
+            formatBtn(2);
+            formatBtn(3);
+        }
+        fill(0, 0, 0);
+    };
+    this.program = config.program || function() {};
+    this.snaps = true;
+    this.paused = config.paused || {
+        minimized: true,
+        maximized: false
+    };
+    this.width = config.width || 400;
+    this.height = config.height || 400;
+
+    this.draw = function() {
+        if (this.paused.minimized !== undefined && this.paused.minimized === false) {
+            this.defaultDraw();
+            pushMatrix();
+            translate(this.winX + 3, this.winY + 3 + this.btnSize);
+            scale((this.wid - 6) / this.width, (this.hei - 6) / this.height);
+            if (typeof this.program === "function") {
+                var aFun = function() {
+                    this.width = 400;
+                    this.height = 400;
+                };
+                this.program(aFun);
+                if (this.snaps === true) {
+                    this.snap = get(this.winX + 3, this.winY + this.btnSize + 3, this.wid - 6, this.hei - 6);
+                }
+                this.runtimes += 1;
+                if (this.runtimes >= this.MAX_VALUE - 2) {
+                    this.runtimes = 0;
+                }
+            }
+            popMatrix();
+        }
+    };
+};
+var topText = function(wind, txt, clr, size) {
+    var a = "";
+    if (typeof txt !== "string") {
+        a = txt[0];
+    } else {
+        a = txt;
+    }
+    if (wind.paused.minimized !== true) {
+        popMatrix();
+        popMatrix();
+        pushMatrix();
+        textSize(13);
+        fill(0);
+        translate(wind.winX + 2, 0);
+        if (clr !== undefined) {
+            fill(clr);
+        }
+        if (size !== undefined) {
+            scale(size, 1);
+        }
+        textAlign(LEFT, TOP);
+        if (typeof txt !== "string") {
+            text(txt[0], 0, wind.winY + 2);
+            text(txt[1], 0, wind.hei + wind.winY + wind.btnSize);
+        } else {
+            text(txt, 0, wind.winY + 2);
+        }
+
+        popMatrix();
+    }
+    wind.name = a;
+};
+var win1 = new window({
+    hei: 180,
+    winY: 21,
+    format: function() {
+        topText(this, ["WGraphs", "by Nate"], color(0, 0, 0));
+        fill(235, 0, 0, 180);
+        stroke(0, 0, 0);
+        strokeWeight(0.5);
+    },
+    init: false,
+    program: function() {
+        if (this.runtimes > 0) {
+            this.snaps = false;
+            image(this.snap, 0, 0, this.width, this.height);
+        } else {
+            // draw the axes
+            stroke(148, 148, 148);
+            line(0, this.height / 2, this.width, this.height / 2);
+            line(this.width / 2, 0, this.width / 2, this.height);
+
+            strokeWeight(2);
+            stroke(0, 173, 23);
+
+
+            var f1 = {
+                lines: true,
+                pts: false,
+                thick1: 2,
+                thick2: 0.3,
+                moveX: 0,
+                moveY: 0,
+                fun: function(x) {
+                    return 100 * sin(x + this.moveX) + this.moveY;
+                },
+                minX: -200,
+                maxX: 200,
+                done: false
+            };
+            var f2 = {
+                lines: true,
+                fun: function(x) {
+                    return 100 * cos(x);
+                },
+                minX: -200,
+                maxX: 200,
+                done: false
+            };
+
+            /**Add two defined functions (this adds f1 to f2)**/
+            var f3 = {
+                lines: true,
+                moveX: 0,
+                moveY: 0,
+                fun: function(x) {
+                    return f1.fun(x + this.moveX) + f2.fun(x + this.moveX) + this.moveY;
+                },
+                minX: -200,
+                maxX: 200,
+                done: false
+            };
+
+            /*****Graph list of points (from negative 400 to postive 400)****/
+            var p1 = {
+                arrX: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11],
+                arrY: [0, 1, 1, 2, 3, undefined, 8, 13, 21, 34],
+                lines: true,
+                fun: function(x) {
+                    return this.arrY[this.arrX.indexOf(x)];
+                },
+                minX: -200,
+                maxX: 200,
+                done: false,
+            };
+
+            /*****Fibonacci Sequence from x=0 to x=500*****/
+            var Fibo = {
+                thick1: 5,
+                thick2: 0.5,
+                lines: true,
+
+                fun: function(x) {
+                    var Phi = (1 + sqrt(5)) / 2;
+                    var phi2 = (1 - sqrt(5)) / 2;
+                    return (pow(Phi, x) - pow(phi2, x)) / sqrt(5);
+                },
+                minX: 0,
+                maxX: 200,
+                done: false,
+                by: 1
+            };
+
+            /*****Original Code*****/
+            /*
+                    y = -100 * tan(x*x);
+                    strokeWeight(2);
+                    point(x + 200, y + 200);
+                    strokeWeight(0.5);
+                    line(x+200,200+-100 * tan(pow(x-0.5,2)),x + 200, y + 200);
+                    x += 0.5;
+            */
+
+            var graph = function(funct, origin) {
+                pushMatrix();
+                translate(origin[0], origin[1]);
+                if (funct.fun !== undefined && funct.done === false) {
+                    if (funct.by === undefined) {
+                        funct.by = 10;
+                    }
+                    for (var x = funct.minX; x < funct.maxX; x += funct.by) {
+                        if (funct.fun(x) !== undefined) {
+                            var y = funct.fun(x);
+                            strokeWeight(funct.thick1 || 3);
+                            if ((funct.pts === undefined || funct.pts === true) && (y < this.height / 2 && y > -this.height / 2)) {
+                                point(x, -y);
+                            }
+
+                            strokeWeight(funct.thick2 || 0.5);
+                            if (funct.lines === true && (y < this.height / 2 && y > -this.height / 2)) {
+                                if (funct.by > 0) {
+                                    line(x - funct.by, -funct.fun(x - funct.by), x, -y);
+                                }
+                            }
+                        }
+                    }
+                    funct.done = true;
+                }
+                popMatrix();
+            };
+
+            var RED = color(255, 0, 0);
+            var BLUE = color(0, 0, 255);
+            var GREEN = color(0, 255, 0);
+            var dORIGIN = [this.width / 2, this.height / 2];
+            fill(255, 255, 255, 360);
+            rect(0, 0, this.width, this.height);
+            stroke(BLUE);
+            graph(f1, dORIGIN);
+
+            stroke(RED);
+            graph(f2, dORIGIN);
+
+            stroke(GREEN);
+            graph(f3, dORIGIN);
+
+            stroke(color(0, 225, 255));
+            graph(Fibo, dORIGIN);
+        }
+    }
+});
+var win2 = new window({
+    hei: 100,
+    winX: 200,
+    winY: 200,
+    width: (width),
+    height: (height),
+    format: function() {
+        topText(this, ["Bookmarklet", "by Nate"]);
+        fill(201, 255, 250, 160);
+        stroke(0, 0, 0);
+        strokeWeight(0.5);
+    },
+    program: function(aFun) {
+        aFun();
+        if (this.runtimes === 0) {
+            fill(0, 0, 0, 360);
+            rect(0, 0, this.width, this.height);
+            this.snaps = false;
+        }
+        if (this.snap) {
+            image(this.snap, 0, 0, this.width, this.height);
+        }
+        var DI = function(x, y, c) {
+            switch (c) {
+                case 1:
+                    image(getImage("avatars/leaf-blue"), x, y, 30, 30);
+                    break;
+                case 2:
+                    image(getImage("avatars/leaf-green"), x, y, 30, 30);
+                    break;
+                case 3:
+                    image(getImage("avatars/leaf-red"), x, y, 30, 30);
+                    break;
+                case 4:
+                    image(getImage("avatars/leaf-yellow"), x, y, 30, 30);
+                    break;
+
+            }
+
+        };
+        var DIL = 30;
+        var R = this.runtimes;
+        var x1 = 2;
+        var y1 = 3;
+        var x2 = 20;
+        var y2 = 20;
+        var x3 = 1.6;
+        var y3 = 0.24;
+        var x4 = 150;
+        var y4 = 150;
+        var x5 = 150;
+        var y5 = 200;
+        fill(255, 255, 255);
+        rect(0, 0, this.width, this.height);
+        for (var i = 0; i < DIL; i++) {
+            DI((sin(R * x1 + i * x2 + x3) * x4 + x5), (cos(R * y1 + i * y2 + y3) * y4 + y5), 1);
+            DI((sin(R * x1 + i * x2 + x3) * -x4 + x5), (cos(R * y1 + i * y2 + y3) * y4 + y5), 2);
+        }
+    }
+});
+var win3 = new window({
+    paused: {
+        minimized: true
+    },
+    width: 400,
+    height: 400,
+    format: function() {
+        topText(win3, "Benchmark Window", color(0), 0.96);
+        fill(239, 255, 115, 160);
+        stroke(0, 0, 0);
+        strokeWeight(0.5);
+    },
+    program: function() {
+        fill(255, 255, 255);
+        rect(0, 0, this.width, this.height);
+        textSize(29);
+        textAlign(CENTER, CENTER);
+        fill(255, 0, 0);
+
+        text("Windows are paused when minimized :-)\n\u26fa\n" + this.runtimes, 0, 0, this.width, this.height);
+        textSize(12);
+        textAlign(LEFT, TOP);
+    }
+});
+var win4 = new window({
+    format: function() {
+        topText(this, ["Space Path", "by Will Early"], color(0), 0.96);
+        fill(239, 255, 115, 160);
+        stroke(0, 0, 0);
+        strokeWeight(0.5);
+    },
+    program: function() {
+        var cool = this.variables.cool || 0; // Try it out :D
+        var boundaries = this.variables.boundaries || 0; // Show orbital boundaries
+        var paths = this.variables.paths || 0; // Show orbital paths
+        var trail = this.variables.trail || 1; // Show lunar trail
+        var fade = this.variables.fade || 1; // Fade the lunar trail
+        var slow = this.variables.slow || 250; // Animation speed reduction
+        var steps = this.variables.steps || 1000; // How many points to plot
+        var precision = this.variables.precision || 0.4; // Plotting precision
+        var centre = {
+            x: 200,
+            y: 200
+        };
+        var distances = {
+            EarthSun: 150,
+            MoonEarth: 38
+        };
+        var orbital_periods = {
+            Earth: 365,
+            Moon: 27
+        };
+        var orbital_velocities = {
+            Earth: 360 / orbital_periods.Earth,
+            Moon: 360 / orbital_periods.Moon
+        };
+        var delta_t = this.variables.delta_t || 0;
+        var time = this.variables.time || 0;
+        var images = {
+            Sun: getImage("cute/Star"),
+            Earth: getImage("space/planet")
+        };
+        var plot = function(count, precision, weight) {
+            var before = time;
+            var new_weight = weight;
+            var j = -1,
+                k = 0;
+            for (var i = count; i > 0; i--) {
+                time += precision * i / count;
+                new_weight = weight * (1 - i / count);
+                strokeWeight(new_weight);
+                if (new_weight > 1) {
+                    if (fade) {
+                        if (j === -1) {
+                            j = 0;
+                            k = count - i;
+                        }
+                        var c = round(1.5 * 255 * ((j++) / k) ^ 2);
+                        stroke(c, c, c);
+                    }
+
+                    point(centre.x + distances.EarthSun * cos(orbital_velocities.Earth * time) + distances.MoonEarth * cos(orbital_velocities.Moon * time), centre.y + distances.EarthSun * sin(orbital_velocities.Earth * time) + distances.MoonEarth * sin(orbital_velocities.Moon * time));
+                }
+            }
+            return time - before;
+        };
+        var orbit = function(centre, radius, weight) {
+            strokeWeight(weight);
+            ellipse(centre.x, centre.y, 2 * radius, 2 * radius);
+        };
+        var spacepath = function() {
+            // time = 0; // debug mode 
+            var oldCentre;
+
+            if (cool) {
+                oldCentre = centre;
+                centre = {
+                    x: 200 - (distances.EarthSun * cos(orbital_velocities.Earth * time) + distances.MoonEarth * cos(orbital_velocities.Moon * time)),
+                    y: 200 - (distances.EarthSun * sin(orbital_velocities.Earth * time) + distances.MoonEarth * sin(orbital_velocities.Moon * time))
+                };
+            }
+
+            noFill();
+            strokeWeight(0.5);
+            bckgrnd(color(0, 0, 0), win4);
+            stroke(212, 148, 148);
+
+            var positions = {
+                Sun: centre,
+                Earth: {
+                    x: centre.x + distances.EarthSun * cos(orbital_velocities.Earth * time),
+                    y: centre.y + distances.EarthSun * sin(orbital_velocities.Earth * time)
+                }
+            };
+
+            if (boundaries) {
+                orbit(positions.Sun, distances.EarthSun + distances.MoonEarth, 0.125);
+                orbit(positions.Sun, distances.EarthSun - distances.MoonEarth, 0.125);
+            }
+
+            if (paths) {
+                stroke(86, 152, 209);
+                orbit(positions.Sun, distances.EarthSun, 1);
+                stroke(233, 237, 245);
+                orbit(positions.Earth, distances.MoonEarth, 0.5);
+            }
+
+            strokeWeight(44);
+            fill(255, 255, 0);
+            stroke(255, 255, 0);
+            image(images.Sun, positions.Sun.x - 33, positions.Sun.y - 68, 67, 114);
+            text("Sun", positions.Sun.x - 10, positions.Sun.y + 44);
+
+            strokeWeight(10);
+            fill(0, 123, 255);
+            stroke(0, 123, 255);
+            point(positions.Earth.x, positions.Earth.y);
+            image(images.Earth, positions.Earth.x - 5, positions.Earth.y - 5, 12, 12);
+            text("Earth", positions.Earth.x - 14, positions.Earth.y + 16);
+
+            stroke(255, 255, 255);
+            if (trail) {
+                time -= (1 - 1 / slow) * delta_t; // rewind time
+                delta_t = plot(steps, precision, 2);
+            } else {
+                time += (steps * precision) / (2.5 * slow);
+                strokeWeight(4);
+                point(centre.x + distances.EarthSun * cos(orbital_velocities.Earth * time) + distances.MoonEarth * cos(orbital_velocities.Moon * time), centre.y + distances.EarthSun * sin(orbital_velocities.Earth * time) + distances.MoonEarth * sin(orbital_velocities.Moon * time));
+            }
+
+            positions.Earth = {
+                x: centre.x + distances.EarthSun * cos(orbital_velocities.Earth * time),
+                y: centre.y + distances.EarthSun * sin(orbital_velocities.Earth * time)
+            };
+
+            positions.Moon = {
+                x: positions.Earth.x + distances.MoonEarth * cos(orbital_velocities.Moon * time),
+                y: positions.Earth.y + distances.MoonEarth * sin(orbital_velocities.Moon * time)
+            };
+
+            fill(255, 255, 255);
+            stroke(168, 168, 168);
+            strokeWeight(7);
+            point(positions.Moon.x, positions.Moon.y);
+            text("Moon", positions.Moon.x - 15, positions.Moon.y + 14);
+
+            if (cool) {
+                centre = oldCentre;
+            }
+            noStroke();
+        };
+        spacepath();
+        this.yar("cool", cool);
+        this.yar("boundaries", boundaries);
+        this.yar("paths", paths);
+        this.yar("trail", trail);
+        this.yar("fade", fade);
+        this.yar("slow", slow);
+        this.yar("steps", steps);
+        this.yar("precision", precision);
+        this.yar("delta_t", delta_t);
+        this.yar("time", time);
+
+    }
+});
+var win5_Once = false;
+var win5 = new window({
+    format: function() {
+        topText(this, ["Preview", "by "], color(0), 1);
+        fill(239, 255, 115, 160);
+        stroke(0, 0, 0);
+        strokeWeight(0.5);
+    },
+    program: function() {
+
+        var x = this.variables.x || 0;
+        if (!win5_Once) {
+            var m = new window({
+                format: function() {
+                    topText(this, ["Your app here!", "by You "], color(0), 0.96);
+                    fill(117, 140, 255, 160);
+                    stroke(0, 0, 0);
+                    strokeWeight(0.5);
+                },
+                program: function() {
+                    bckgrnd(color(82, 226, 255, 180), m);
+                }
+            });
+            win5_Once = true;
+        }
+        textSize(29);
+        textAlign(CENTER, CENTER);
+        bckgrnd(color(255, 255, 255, 180), win5);
+        fill(0);
+        text("New apps are needed!\n\nInvite friends over to post links to your own or another's apps!\n\u26fa\n" + x, 0, 0, this.width, this.height);
+        textSize(12);
+        textAlign(LEFT, TOP);
+        x++;
+        this.yar("x", x);
+
+    }
+});
+cursor("none");
+var mouse = function() {
+    strokeWeight(0.5);
+    stroke(255, 255, 255);
+    fill(0, 0, 0);
+    beginShape();
+    vertex(mouseX, mouseY);
+    vertex(mouseX, mouseY + 20);
+    vertex(mouseX + 5, mouseY + 10);
+    vertex(mouseX + 8, mouseY + 15);
+    vertex(mouseX + 15, mouseY + 20);
+    endShape(CLOSE);
+};
+var onceOnly = true;
+var snapshot = get(0, 0, 400, 400);
+var clicked = false;
+mouseReleased = function() {
+    clicked = false;
+    onceOnly = true;
+};
+var grad = function(from, to) {
+    for (var i = 0; i < height / 3; i++) {
+        strokeWeight(4);
+        stroke(lerpColor(from, to, i / (height / 3)));
+        line(0, i * 3, width, i * 3);
+    }
+};
+var winds = function(arr) {
+    var sFn = function(a, b) {
+        if (a.name < b.name) {
+            return -1;
+        }
+        if (a.name > b.name) {
+            return 1;
+        } else {
+            return 0;
+        }
+    };
+    return arr.sort(sFn);
+};
+var selectedWin = [];
+var m = false;
+var appsPR = floor(width / 400 * 5);
+var windowHover = false;
+var background1 = function(){
+    background(217, 217, 217);
+    image(getImage("food/cake"),0,0,400,400);
+};
+var draw2 = function() {
+    background(255, 255, 255);
+    image(snapshot, 0, 0, width, height);
+    background1();
+    var keys = Object.keys(windows);
+    var keyL = keys.length;
+    fill(255, 255, 255, 180);
+    rect(20, 20, width - 40, height - 40);
+    var WINDOWSTORAGE = winds(windows.slice());
+    for (var i = 0; i < WINDOWSTORAGE.length; i++) {
+        var shelf = (i - i % appsPR) / appsPR;
+        WINDOWSTORAGE[i].format();
+        rect(67 + (i - appsPR * shelf) * 64, 75 * shelf + 25, 32, 32, 5);
+        noStroke();
+        fill(255);
+
+        rect(67 + (i - appsPR * shelf) * 64 + 20, 75 * shelf + 25 + 20, 0, 0.1, -10);
+        fill(0, 0, 0);
+        textAlign(CENTER, BOTTOM);
+        textSize(11);
+        text(WINDOWSTORAGE[i].name || Object.keys(WINDOWSTORAGE)[i], 67 - (75 - 67) + (i - appsPR * shelf) * 64, 75 * shelf + 67, 49, 39);
+
+        if (!windowHover && mouseIn(67 + (i - appsPR * shelf) * 64, 75 * shelf + 25, 32, 32, 5) && !m && !clicked && mouseIsPressed) {
+            WINDOWSTORAGE[keys[i]].paused.minimized = !WINDOWSTORAGE[keys[i]].paused.minimized;
+
+        }
+    }
+    if (mouseIsPressed) {
+        m = true;
+    } else {
+        m = false;
+    }
+    var oneWinHovered = false;
+    for (var i = 0; i < keyL; i++) {
+        windows[keys[i]].draw();
+        oneWinHovered = oneWinHovered || windows[keys[i]].check(1);
+
+        windowHover = oneWinHovered;
+        if (mouseIsPressed) {
+            if (windows[keys[i]].check()) {
+                windowHover = false;
+                if (!clicked) {
+                    windows[keys[i]].clicked = true;
+                    selectedWin[0] = windows[keys[i]];
+                    selectedWin[1] = keys[i];
+                }
+                clicked = true; //Only one window dragged at a time
+            }
+        } else {
+            clicked = false;
+        }
+
+        if (windows[keys[i]].clicked && !windows[keys[i]].paused.maximized) {
+
+            windows[keys[i]].winX -= (windows[keys[i]].winX - mouseX + windows[keys[i]].wid / 2) / 1.5;
+            windows[keys[i]].winY -= (windows[keys[i]].winY - mouseY + 3) / 1.5;
+        }
+        if (clicked === false) {
+            windows[keys[i]].clicked = false;
+        }
+
+    }
+    var keys = Object.keys(windows);
+
+    if ((clicked && selectedWin !== undefined) && onceOnly) {
+        if (selectedWin[0]) {
+            var temp = selectedWin[1];
+            if (windows[temp] !== windows[keys[keyL]]) {
+                windows.splice(selectedWin[1], 1);
+                windows.push(selectedWin[0]);
+            }
+        }
+        onceOnly = false;
+    }
+
+
+    mouse();
+
+};
+var draw = function() {
+    
+        textFont(createFont("Tahoma"));
+        textAlign(LEFT, BOTTOM);
+        
+        if(on === true) {
+            if(lock === true) {
+                cursor(ARROW);
+                fill(255, 255, 255);
+                text(">",mouseX+1,mouseY+10);
+                strokeWeight(3);
+                stroke(255, 255, 255);
+                line(pmouseX, pmouseY, mouseX, mouseY);
+                background(255, 0, 0);
+                background1();
+                noStroke();
+                noStroke();
+                var m = minute();
+                var h = hour();
+                textAlign(CENTER, CENTER);
+                var per = (h < 12) ? "AM" : (h === 12 || h > 12) ? "PM" : "";
+                m = m < 10 ? "0" + m : m;
+                h = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                fill(255, 255, 255);
+                textSize(100);
+                text(h + ":" + m, 201, 62);
+                textSize(30);
+                text(mm + "/" + dd + "/" + yy, 201, 123);
+                textSize(10);
+                desktime = 0;
+                var number = slider(width / 2 - 100, 323, 200, 100);
+                noStroke();
+                if(number === 100) {
+                    lock = false;
+                    NOScr = true;
+                    openApp = "home";
+                }
+            } else {
+                switch(openApp) {
+                    case "home":
+                        background(255, 0, 0);
+                        background1();
+                        draw2();
+                        break;
+                    
+                }
+            }
+        }
+        
+    
+};
