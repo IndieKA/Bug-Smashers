@@ -1,0 +1,129 @@
+var gameState = "Menu";
+var flappyBall = function() {
+    this.y = 200;
+    this.yvel = 0;
+    this.s = 0;
+    this.draw = function() {
+        fill(255, 255, 255);
+        ellipse(100, this.y, 30, 30);
+    };
+    this.move = function() {
+        if (mouseIsPressed) {
+            this.yvel = -3;
+        } else {
+            this.yvel += 0.25;
+        }
+        this.y += this.yvel;
+    };
+    this.die = function(p) {
+        for (var i in p) {
+            if ((this.y - 15 < p[i].y || this.y + 13.5 > p[i].y + p[i].s) && 55 < p[i].x && 115 > p[i].x) {
+                noLoop();
+                fill(0, 0, 0);
+                textSize(80);
+                text("You Lost!", 201, 153);
+                textSize(30);
+                text("Post your score in the Tips\nand Thanks by making a\nSpinoff.", 201, 250);
+            }
+        }
+        if (this.y > 385) {
+            noLoop();
+            fill(0, 0, 0);
+            textSize(80);
+            text("You Lost!", 201, 153);
+            textSize(30);
+            text("Post your score in the Tips\nand Thanks by making a\nSpinoff.", 201, 250);
+        }
+    };
+};
+var d = new flappyBall();
+var pipeObstacle = function(x) {
+    this.y = floor(random(50, 250));
+    this.x = x;
+    this.s = 100;
+    this.s2 = 1;
+    this.draw = function() {
+        noStroke();
+        fill(255, 255, 255, 200);
+        rect(this.x, 0, 30, this.y - 20);
+        rect(this.x - 5, this.y - 20, 40, 20);
+        rect(this.x - 5, this.y + this.s, 40, 20);
+        rect(this.x, this.y + this.s, 30, 400 - this.y - this.s);
+    };
+    this.move = function(d) {
+        this.x -= this.s2;
+        if (this.x < -30) {
+            this.x = 570;
+            this.y = floor(random(50, 250));
+        }
+        if (65 === this.x) {
+            d.s++;
+        }
+    };
+};
+var p = [];
+for (var i = 0; i < 4; i ++) {
+    p.push(new pipeObstacle(i * 150 + 270));
+}
+noStroke();
+var draw = function() {
+    if (gameState === "Menu") {
+        background(255, 255, 255);
+        textAlign(CENTER, CENTER);
+        image(getImage("space/background"), 0, 0, 400, 400);
+        noStroke();
+        fill(255, 255, 255, 200);
+        rect(104, 0, 40, 153);
+        rect(99, 127, 50, 30);
+        rect(104, 256, 40, 153);
+        rect(99, 249, 50, 30);
+        rect(230, 0, 40, 120);
+        rect(223, 214, 50, 30);
+        rect(226, 113, 50, 30);
+        rect(226, 227, 40, 200);
+        rect(368, 0, 40, 150);
+        rect(360, 127, 50, 30);
+        rect(364, 256, 40, 150);
+        rect(360, 236, 50, 30);
+        textSize(47);
+        fill(0, 0, 0);
+        text("Flappy Ball!",197,42);
+        textSize(30);
+        fill(0, 0, 0);
+        text("Created by: Inception", 194, 83);
+        text("Click to Start", 201, 180);
+        textSize(20);
+        text("Instructions: Tap to flap up and let go to\ndrop. Don't hit the pipes, or you will lose!\nSave your score by making a spinoff.", 201, 310);
+        fill(255, 255, 255);
+        rotate(15);
+        ellipse(111, 205, 30, 30);
+        rect(98, 224, 2, 30);
+        rect(110, 224, 2, 30);
+        rect(122, 224, 2, 30);
+        resetMatrix();
+        popMatrix();
+
+    }
+    if (gameState === "Play") {
+        resetMatrix();
+        rectMode(UP);
+        background(201, 69, 69);
+        image(getImage("space/background"), 0, 0, 400, 400);
+        d.draw();
+        d.move();
+        d.die(p);
+        for (var i in p) {
+            p[i].draw();
+            p[i].move(d);
+        }
+        fill(255, 255, 255);
+        text(d.s, 200, 20);
+    }
+};
+mouseClicked = function() {
+    gameState = "Play";
+};
+
+
+
+
