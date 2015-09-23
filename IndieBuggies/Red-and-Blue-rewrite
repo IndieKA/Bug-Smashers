@@ -1,0 +1,1150 @@
+/**
+    Red & Blue - Rewrite by Kaadmy
+
+    Game created by Inception And Red Vice
+    Level creator: https://www.khanacademy.org/computer-programming/redblue-level-creator/4667703065444352
+**/
+var levels = [
+
+    [
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "        #          T       ",
+
+        "       $#      ######      ",
+
+        "       $# ##   $$$$##      ",
+
+        "P  T  A$#A $$$    #### $$ @",
+
+        "###########################",
+
+    ],
+
+    [
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "                           ",
+
+        "#  #    #  #       T       ",
+
+        "#       #      ######      ",
+
+        "        #          ##      ",
+
+        "P  T  A #A        ####    @",
+
+        "###########################",
+
+    ],
+
+    [
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                      @    ",
+
+            "                      #    ",
+
+            "    :                      ",
+
+            "    #                    ##",
+
+            "    #         $  $     $$  ",
+
+            "P  T#T   $#   #  #  #  ##  ",
+
+            "######AAA##AAA#  #AA#      ",
+
+            "###############  ######    "
+
+        ],
+
+        [
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                        ###",
+
+            "                         T#",
+
+            "#T                       ##",
+
+            "##                        #",
+
+            "#P    A$  A$  A$  A$ :A$ @#",
+
+            "###########################"
+
+        ],
+
+        [
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                           ",
+
+            "                         @ ",
+
+            "                         # ",
+
+            "                       #   ",
+
+            "                    #      ",
+
+            "                 #         ",
+
+            "              #            ",
+
+            "           #               ",
+
+            "        #                  ",
+
+            "P    #                     ",
+
+            "###                        "
+
+        ],
+
+        [
+
+            "                           ",
+
+            "          @                ",
+
+            "         ###               ",
+
+            "              $            ",
+
+            "             ###           ",
+
+            "          $                ",
+
+            "         ###               ",
+
+            "              $            ",
+
+            "             ###           ",
+
+            "          $                ",
+
+            "         ###               ",
+
+            "                           ",
+
+            "P            ###           ",
+
+            "###########################"
+
+        ],
+
+        [
+
+            "                ###        ",
+
+            "               :#T#        ",
+
+            "               T#@#        ",
+
+            "          $   #####        ",
+
+            "          #                ",
+
+            "      #                    ",
+
+            "                           ",
+
+            "        ##                 ",
+
+            "           $               ",
+
+            "           ##  :           ",
+
+            "               ##   $      ",
+
+            "                   ##    P ",
+
+            "                       ####",
+
+            "                           "
+
+        ],
+
+        [
+
+            "                           ",
+
+            "          @    :           ",
+
+            "         ###   #       #   ",
+
+            "             $$$    #      ",
+
+            "             ###           ",
+
+            "           #               ",
+
+            "   ### $$            #     ",
+
+            "       ##                  ",
+
+            "           #        #      ",
+
+            "                #          ",
+
+            "               ###         ",
+
+            "              #####        ",
+
+            "P            ########      ",
+
+            "###########################"
+
+        ],  
+
+        [
+
+            "                           ",
+
+            "   @   $     :  T          ",
+
+            "   #   #A#    ###   #    ##",
+
+            "         :  $$         ##  ",
+
+            "       #  #A##             ",
+
+            "                 $         ",
+
+            "               #A#         ",
+
+            "                     #     ",
+
+            "                   $       ",
+
+            "                   # # #   ",
+
+            "              #            ",
+
+            "          $$$      # # #   ",
+
+            "P       # ### ###         T",
+
+            "###########################"
+
+        ],
+
+        [
+
+            "       @                   ",
+
+            "       #  #                ",
+
+            "               #           ",
+
+            "                   #       ",
+
+            "                       T   ",
+
+            "                       #   ",
+
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAA",
+
+            "                           ",
+
+            "             ##  T         ",
+
+            "            #    # #       ",
+
+            "          #A#         #    ",
+
+            "                    #      ",
+
+            "P       #####    #         ",
+
+            "########     ##############"
+
+        ],
+
+        [
+
+            "T                          ",
+
+            "A                          ",
+
+            "A             #          # ",
+
+            "A                   #      ",
+
+            "A         #               T",
+
+            "                          #",
+
+            "              #            ",
+
+            "                  ##       ",
+
+            "T  AAAAAAAAAAAAAAAAAAA     ",
+
+            "                       ###T",
+
+            "@#                        #",
+
+            "##                   #     ",
+
+            "P                       #  ",
+
+            "####  #  #  #   #   #      "
+
+        ],
+
+        //Bonus level
+
+        [
+
+            "TTTTTTTTTTTTTTTTTTTTTTTTTTT",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$$",
+
+            "$$$$$$$$$$$$$$$$$$$$$$$$$$#",
+
+            "PTTTTTTTTTTTTTTTTTTTTTTTTT@",
+
+            "###########################",
+
+        ],
+
+];
+var currentLevel=0;
+var parsedLevel=[];
+
+var gameState="home";
+
+var runTime=0;
+var lastFrame=millis();
+var d=0;
+
+var collide=function(a, b) {
+    if(a.x+a.w > b.x && a.x < b.x+b.w && a.y+a.h > b.y && a.y < b.y+b.h) {
+        return(true);
+    }
+    return(false);
+};
+
+var keys=[];
+var keysPress=[];
+var mouse=[];
+var mousePress=[];
+
+var button=function(x, y, w, h, t, ts) {
+    ts=ts||30;
+    
+    var s="none";
+    if(mouseX > x && mouseY > y && mouseX < x+w && mouseY < y+h) {
+        if(mousePress[LEFT]) {
+            s="click";
+        } else {
+            s="hover";
+        }
+    }
+    
+    strokeWeight(3);
+    stroke(50);
+    rect(x, y, w, h, 6);
+
+    noStroke();
+    if(s === "hover") {
+        fill(200, 200, 200, 50);
+        rect(x, y, w, h, 6);
+    }
+    
+    textAlign(CENTER, CENTER);
+    textSize(ts);
+    fill(50);
+    text(t, x+(w/2), y+(h/2));
+    
+    return(s);
+};
+
+var blockSize=30;
+
+var cameraPos=0;
+var cameraSpeed=6;
+
+var gravity=900;
+
+var playerSpeed=1000;
+var playerDamp=0.17;
+var playerJumpForce=380;
+var playerMaxHealth=8;
+var player={
+    pos: [0, 0],
+    vel: [0, 0],
+
+    coins: 0,
+
+    health: playerMaxHealth,
+    lastDamage: 10,
+    dead: false,
+    damage: function() {
+        if(player.lastDamage > 1) {
+            player.lastDamage=0;
+            player.health--;
+        }
+    },
+    
+    lastTeleport: 10,
+    portalDepth: 0, // 0 to 1
+    portal: 0,
+
+    color: 130,
+    gender: "male",
+    mouth: "none",
+    eyes: "simple"
+};
+var drawCharacter=function(x, y, w, h, xv, yv) {
+    xv=xv||0;
+    yv=yv||0;
+    
+    noStroke();
+    
+    pushMatrix();
+    translate(x, y);
+    
+    colorMode(HSB);
+    fill(player.color, 255, 255);
+    colorMode(RGB);
+
+    if(player.gender === "male") {
+        rect(0, 0, w, h, 3);
+    } else {
+        rect(w*0.05, 0, w*0.9, h, 6);
+    }
+    
+    var blink=constrain(map(sin(millis()*0.05), -1, 1, 0, 2000), 0, 1);
+
+    pushMatrix();
+    translate((w/2)+constrain(xv, -4, 4), 4+constrain(yv, -4, 4));
+    scale(1, blink);
+
+    if(player.eyes === "simple") {
+        fill(50);
+        rect(-10, 0, 5, 8);
+        rect(5, 0, 5, 8);
+    } else if(player.eyes === "evil") {
+        fill(150, 0, 0);
+        rect(-8, 0, 3, 8);
+        rect(5, 0, 3, 8);
+    }
+
+    popMatrix();
+    
+    if(player.mouth === "simple") {
+        fill(50);
+        rect((w/2)-5, h*0.7, 10, 4);
+    } else if(player.mouth === "evil") {
+        fill(150, 0, 0);
+        rect((w/2)-2, h*0.74, 4, 2);
+    }
+
+    popMatrix();
+};
+
+var drawBlock=function(type, x, y, w, h) {
+    switch(type) {
+        case "block":
+            noStroke();
+
+            fill(0, 100, 200);
+            rect(x, y, w, h);
+            
+            fill(100, 180, 250);
+            triangle(x+2, y+2, x+10, y+2, x+2, y+10);
+
+            fill(0, 80, 180);
+            rect((x+(w/2))-4, (y+(h/2))-4, 8, 8);
+            break;
+        case "turret":
+            noStroke();
+            fill(255, 50, 0);
+            ellipse(x+(w/2), y+(h/2), w, h);
+
+            pushMatrix();
+            translate(x+(w/2), y+(h/2));
+            strokeWeight(7);
+            stroke(50, 50, 50);
+            line(0, 7, 0, 15);
+            
+            popMatrix();
+
+            noStroke();
+            fill(50, 255, 255);
+            ellipse(x+(w/2), y+(h/2), w/2, h/2);
+            break;
+        case "lava":
+            noStroke();
+
+            colorMode(HSB);
+            var e=(sin(millis()*0.15)*12)+12;
+
+            fill(e, 255, 255);
+            colorMode(RGB);
+            rect(x, y, w, h);
+            break;
+        case "coin":
+            noStroke();
+            
+            pushMatrix();
+            translate(x+(w/2), y+(h/2));
+            
+            scale(sin(millis()*0.3), 1);
+            
+            fill(230, 210, 70);
+            ellipse(0, 0, w*0.75, h*0.75);
+
+            w*=0.55;
+            h*=0.55;
+
+            fill(250, 240, 120);
+            arc(0, 0, w, h, 15, 75);
+            arc(0, 0, w, h, 135, 185);
+            arc(0, 0, w, h, 245, 305);
+
+            fill(200, 180, 50);
+            arc(0, 0, w, h, -55, 15);
+            arc(0, 0, w, h, 75, 135);
+            arc(0, 0, w, h, 185, 245);
+
+            popMatrix();
+            break;
+        case "teleport":
+            stroke(200, 50, 200);
+            strokeWeight(2);
+            
+            var s=sin(millis()*0.2)*(h/2)+(h/2);
+            line(x, y+s, x+w, y+s);
+            s=cos(millis()*0.3)*(h/2)+(h/2);
+            line(x, y+s, x+w, y+s);
+            break;
+        case "portal":
+            stroke(0, 200, 100);
+            strokeWeight(3);
+            fill(0, 200, 100, 50);
+
+            ellipseMode(CENTER);
+            
+            pushMatrix();
+            translate(x+(w/2), y+(h/2));
+            rotate(millis()*0.1);
+            scale(sin(millis()*0.2), 1);
+            ellipse(0, 0, w, h);
+            popMatrix();
+
+            pushMatrix();
+            translate(x+(w/2), y+(h/2));
+            rotate(millis()*0.10);
+            scale(1, cos(millis()*0.2));
+            ellipse(0, 0, w, h);
+            popMatrix();
+            break;
+    }
+};
+var drawLevel=function() {
+    for(var i=0;i<parsedLevel.length;i++) {
+        var block=parsedLevel[i];
+        drawBlock(block[0], block[1], block[2], block[3], block[4]);
+    }
+};
+var loadLevel=function() {
+    parsedLevel=[];
+    var level=levels[currentLevel];
+    for(var i=0;i<level.length;i++) {
+        for(var j=0;j<level[i].length;j++) {
+            if(level[i][j] === "P") {
+                player.pos=[j*blockSize, i*blockSize];
+                player.vel=[0, 0];
+                player.lastTeleport=10;
+                player.dead=false;
+                player.health=playerMaxHealth;
+            } else if(level[i][j] === " ") {
+                continue;
+            } else {
+                var type="block";
+                switch(level[i][j]) {
+                    case "A":
+                        type="lava";
+                        break;
+                    case "$":
+                        type="coin";
+                        break;
+                    case ":":
+                        type="turret";
+                        break;
+                    case "T":
+                        type="teleport";
+                        break;
+                    case "@":
+                        type="portal";
+                        break;
+                }
+                parsedLevel.push([type, j*blockSize, i*blockSize, blockSize, blockSize]);
+            }
+        }
+    }
+};
+var resetPlayer=function() {
+    player.health=playerMaxHealth;
+    player.lastDamage=10;
+    player.teleport=10;
+    player.portalDepth=0;
+    player.portal=false;
+    player.pos=[0, 0];
+    player.vel=[0, 0];
+    player.coins=0;
+};
+
+loadLevel();
+
+var gameStates={
+    "home": function() {
+        background(50, 200, 200);
+        
+        noStroke();
+        fill(200, 50, 50);
+        rect(width/2, 0, width/2, height);
+
+        textAlign(CENTER, CENTER);
+        textSize(70);
+
+        pushMatrix();
+        translate((width/2)-100, 50);
+        rotate(-20);
+        pushMatrix();
+        scale(0.9);
+        fill(50, 50, 50);
+        text("Red", 0, 0);
+        popMatrix();
+        fill(200, 50, 50);
+        text("Red", 0, 0);
+        popMatrix();
+
+        pushMatrix();
+        translate((width/2)+100, 50);
+        rotate(20);
+        pushMatrix();
+        scale(0.9);
+        fill(50, 50, 50);
+        text("Blue", 0, 0);
+        popMatrix();
+        fill(50, 200, 200);
+        text("Blue", 0, 0);
+        popMatrix();
+        
+        pushMatrix();
+        translate(width/2, 100);
+        pushMatrix();
+        scale(0.9);
+        fill(50, 50, 50);
+        text("&", 0, 0);
+        popMatrix();
+        fill(200, 200, 200);
+        text("&", 0, 0);
+        popMatrix();
+
+        textSize(26);
+        fill(50, 50, 50);
+        text("K&F", width/2, 160);
+
+        textAlign(LEFT, BOTTOM);
+        textSize(16);
+        fill(50, 50, 50);
+        text("Copyright 2015 Inception and Kaadmy", 10, height-10);
+
+        fill(200, 50, 50);
+        if(button(20, 190, 170, 60, "Play", 30) === "click") {
+            gameState="play";
+        }
+        fill(50, 200, 200);
+        if(button(210, 190, 170, 60, "Levels", 30) === "click") {
+            gameState="levelselect";
+        }
+        fill(200, 50, 50);
+        if(button(20, 270, 170, 60, "Credits", 30) === "click") {
+            gameState="credits";
+        }
+        fill(50, 200, 200);
+        if(button(210, 270, 170, 60, "Customize", 30) === "click") {
+            gameState="customize";
+        }
+    },
+    "levelselect": function() {
+        background(500, 200, 200);
+
+        textAlign(CENTER, CENTER);
+        textSize(50);
+        fill(200, 50, 50);
+        text("Level Select", width/2, 30);
+
+        for(var i=0;i<levels.length;i++) {
+            var x=(i%(width/50))*50;
+            var y=floor((i/(width/50)))*50;
+        
+            fill(200, 50, 50);
+            if(button(10+x, 100+y, 30, 30, i+1, 16) === "click") {
+                currentLevel=i;
+                resetPlayer();
+                loadLevel();
+                gameState="play";
+            }
+        }
+
+        fill(50, 200, 200);
+        if(button(10, height-50, 80, 40, "Back", 18) === "click") {
+            gameState="home";
+        }
+    },
+    "customize": function() {
+        background(500, 200, 200);
+
+        textAlign(CENTER, CENTER);
+        textSize(50);
+        fill(200, 50, 50);
+        text("Customize", width/2, 30);
+
+        textAlign(RIGHT, CENTER);
+        textSize(18);
+        fill(50, 50, 50);
+        text("Color: ", 90, 100);
+        text("Gender: ", 90, 150);
+        text("Eyes: ", 90, 200);
+        text("Mouth: ", 90, 250);
+
+        colorMode(HSB);
+        strokeWeight(1);
+        for(var i=0;i<230;i++) {
+            var c=map(i, 0, 230, 0, 255);
+            stroke(c, 255, 255);
+            line(100+i, 80, 100+i, 120);
+        }
+        colorMode(RGB);
+        
+        if(mouseX > 100 && mouseX < 330 && mouseY > 80 && mouseY < 120) {
+            if(mouse[LEFT]) {
+                player.color=map(mouseX, 100, 330, 0, 255);
+            }
+        }
+        
+        noStroke();
+        fill(50, 50, 50);
+        var m=map(player.color, 0, 255, 100, 330);
+        rect(m-2, 78, 4, 44);
+
+        fill(50, 200, 200);
+        if(button(100, 130, 110, 40, "Male", 18) === "click") {
+            player.gender="male";
+        }
+        fill(200, 50, 50);
+        if(button(220, 130, 110, 40, "Female", 18) === "click") {
+            player.gender="female";
+        }
+
+        fill(50, 200, 200);
+        if(button(100, 180, 70, 40, "Simple", 18) === "click") {
+            player.eyes="simple";
+        }
+        fill(200, 50, 50);
+        if(button(180, 180, 70, 40, "Evil", 18) === "click") {
+            player.eyes="evil";
+        }
+        fill(200, 50, 50);
+        if(button(260, 180, 70, 40, "None", 18) === "click") {
+            player.eyes="none";
+        }
+
+        fill(50, 200, 200);
+        if(button(100, 230, 70, 40, "None", 18) === "click") {
+            player.mouth="none";
+        }
+        fill(200, 50, 50);
+        if(button(180, 230, 70, 40, "Simple", 18) === "click") {
+            player.mouth="simple";
+        }
+        fill(200, 50, 50);
+        if(button(260, 230, 70, 40, "Evil", 18) === "click") {
+            player.mouth="evil";
+        }
+
+        fill(50, 200, 200);
+        if(button(10, height-50, 80, 40, "Back", 18) === "click") {
+            gameState="home";
+        }
+    },
+    "credits": function() {
+        background(200, 50, 50);
+
+        textAlign(CENTER, CENTER);
+        textSize(50);
+        fill(50, 200, 200);
+        text("Credits", width/2, 30);
+        
+        textSize(18);
+        fill(50, 50, 50);
+        text("Kaadmy and RaghavCS", width/2, height/2);
+
+        fill(50, 200, 200);
+        if(button(10, height-50, 80, 40, "Back", 18) === "click") {
+            gameState="home";
+        }
+    },
+    "shop": function() {
+        background(50, 200, 200);
+
+        textAlign(CENTER, CENTER);
+        textSize(50);
+        fill(200, 50, 50);
+        text("Shop", width/2, 30);
+        
+        fill(200, 50, 50);
+        if(button(50, 100, 140, 40, "[$4] health +1", 18) === "click") {
+            if(player.coins >= 4 && player.health < playerMaxHealth) {
+                player.health++;
+                player.coins-=4;
+            }
+        }
+        
+        textAlign(RIGHT, BOTTOM);
+        textSize(30);
+        fill(50, 50, 50);
+        text("$"+player.coins, width-10, height-10);
+
+        fill(200, 50, 50);
+        if(button(10, height-50, 80, 40, "Back", 18) === "click") {
+            gameState="play";
+        }
+    },
+    "win": function() {
+        colorMode(HSB);
+        var r=(runTime*127)%255;
+        background(r, 150, 255);
+        colorMode(RGB);
+
+        textAlign(CENTER, CENTER);
+        textSize(40);
+        text("You've finished\nall the levels!", width/2, (height/2)-70);
+    },
+    "lose": function() {
+        colorMode(HSB);
+        var r=(runTime*30)%60;
+        if(r > 30) {
+            r=60-r;
+        }
+        background(r, 150, 255);
+        colorMode(RGB);
+
+        textAlign(CENTER, CENTER);
+        textSize(40);
+        text("You died.\nTry again!", width/2, (height/2)-70);
+    },
+    "play": function() {
+        if(keys["M".charCodeAt(0)]) {
+            gameState="home";
+        }
+        
+        var c=function() {
+            for(var i=0;i<parsedLevel.length;i++) {
+                var block=parsedLevel[i];
+                if(block[0] === "block") {
+                    if(collide({x: player.pos[0], y: player.pos[1], w: blockSize, h: blockSize},
+                        {x: block[1], y: block[2], w: block[3], h: block[4]})) {
+                        return(block);
+                    }
+                }
+            }
+        };
+        var inside=function() {
+            for(var i=0;i<parsedLevel.length;i++) {
+                var block=parsedLevel[i];
+                if(collide({x: player.pos[0], y: player.pos[1], w: blockSize, h: blockSize},
+                    {x: block[1], y: block[2], w: block[3], h: block[4]})) {
+                    return([block, i]);
+                }
+            }
+        };
+
+        player.vel[0]*=constrain(map(d, 0, playerDamp, 1, 0), 0, 1);
+
+        if(keys[LEFT]) {
+            player.vel[0]-=playerSpeed*d;
+        }
+        if(keys[RIGHT]) {
+            player.vel[0]+=playerSpeed*d;
+        }
+        
+        player.vel[1]+=gravity*d;
+        
+        player.pos[0]+=player.vel[0]*d;
+        var block=c();
+        if(block) {
+            if(player.vel[0] > 0) {
+                player.pos[0]=block[1]-blockSize;
+            } else {
+                player.pos[0]=block[1]+block[3];
+            }
+            player.vel[0]=0;
+        }
+        
+        player.pos[1]+=player.vel[1]*d;
+        var block=c();
+        if(block) {
+            if(player.vel[1] >= 0) {
+                player.pos[1]=block[2]-blockSize;
+                player.vel[1]=0;
+                if(keys[UP]) {
+                    player.vel[1]-=playerJumpForce;
+                }
+            } else {
+                player.pos[1]=block[2]+block[4];
+                player.vel[1]=0;
+            }
+        }
+        
+        player.lastTeleport+=d;
+
+        var in_block=inside();
+        if(in_block) {
+            if(in_block[0][0] === "lava") {
+                player.damage();
+            } else if(in_block[0][0] === "portal") {
+                player.portal=1;
+            } else if(in_block[0][0] === "coin") {
+                player.coins++;
+                player.health++;
+                parsedLevel.splice(in_block[1], 1);
+            } else if(in_block[0][0] === "teleport") {
+                if(player.lastTeleport > 2) {
+                    var possibleTeles=[];
+                    for(var i=0;i<parsedLevel.length;i++) {
+                        var block=parsedLevel[i];
+                        
+                        if(block[0] === "teleport" && i !== in_block[1]) {
+                            possibleTeles.push(block);
+                        }
+                    }
+                    var rand=round(random(0, possibleTeles.length-1));
+                    if(rand !== -1) {
+                        player.lastTeleport=0;
+                        player.pos[0]=possibleTeles[rand][1];
+                        player.pos[1]=possibleTeles[rand][2];
+                    }
+                }
+            }
+        }
+        
+        if(player.portal === 1) {
+            player.portalDepth+=d;
+            if(player.portalDepth > 1) {
+                currentLevel++;
+                if(currentLevel >= levels.length) {
+                    gameState="win";
+                    return;
+                }
+                loadLevel();
+                player.portalDepth=0;
+                player.portal=-1;
+            }
+        } else if(player.portal === -1) {
+            if(player.portalDepth < 0.1) {
+                player.portalDepth=0;
+                player.portalDepth=0;
+            } else {
+                player.portalDepth-=d;
+            }
+        }
+
+        if(player.pos[1] > 400) {
+            player.health=0;
+        }
+        if(player.health <= 0) {
+            player.dead=true;
+            gameState="lose";
+        }
+        player.health=constrain(player.health, 0, playerMaxHealth);
+        player.lastDamage+=d;
+        
+        background(190);
+        
+        noFill();
+        strokeWeight(4);
+        stroke(120);
+        
+        line(50, 0, 50, 150);
+        line(0, 300, 150, 300);
+        line(150, 300, 150, 150);
+        line(50, 150, 150, 150);
+        ellipse(50, 150, 50, 50);
+        ellipse(150, 150, 50, 50);
+        ellipse(150, 300, 50, 50);
+
+        line(300, 0, 300, 100);
+        line(300, 100, 200, 100);
+        line(200, 100, 200, 200);
+        line(200, 200, 400, 200);
+        ellipse(200, 100, 50, 50);
+        ellipse(300, 100, 50, 50);
+        ellipse(200, 200, 50, 50);
+
+        cameraPos=map(constrain(d*cameraSpeed, 0, 1), 0, 1, cameraPos, player.pos[0]);
+
+        pushMatrix();
+        var x=constrain(cameraPos-width/2, 0, (levels[currentLevel][0].length*blockSize)-width);
+        translate(-x, 0);
+        
+        if(player.lastDamage > 1 || (player.lastDamage < 1 && frameCount%9 <= 4)) {
+            drawCharacter(player.pos[0], player.pos[1], blockSize, blockSize,
+                player.vel[0]*0.1, player.vel[1]*0.1);
+        }
+        drawLevel();
+        
+        popMatrix();
+        
+        noStroke();
+        if(player.portal !== 0) {
+            fill(200, 50, 200, map(player.portalDepth, 0, 1, 0, 255));
+            rect(0, 0, width, height);
+        }
+
+        fill(200, 100, 100);
+        ellipse(width/2, 0, 100, 100);
+        
+        var seg=(180/playerMaxHealth);
+        for(var i=0;i<playerMaxHealth;i++) {
+            if(i <= player.health) {
+                fill(50, 200, 50);
+            } else {
+                fill(100, 100, 100);
+            }
+            pushMatrix();
+            translate(width/2, 0);
+            rotate(map(i, 0, playerMaxHealth, 0, 180));
+            translate(10, 0);
+            arc(0, 0, 70, 70, 0, seg);
+            popMatrix();
+        }
+        
+        textAlign(LEFT, CENTER);
+        textSize(30);
+        drawBlock("coin", 0, 0, 40, 40);
+        fill(50, 50, 50);
+        text(player.coins, 40, 20);
+
+        fill(200, 50, 50);
+        if(button(width-90, 10, 80, 30, "Shop", 18) === "click") {
+            gameState="shop";
+        }
+    },
+};
+
+var draw=function() {
+    d=(millis()-lastFrame)/1000;
+    lastFrame=millis();
+    runTime+=d;
+    
+    gameStates[gameState]();
+    
+    keysPress=[];
+    mousePress=[];
+};
+
+var keyPressed=function() {
+    keys[keyCode]=true;
+    keysPress[keyCode]=true;
+};
+var keyReleased=function() {
+    keys[keyCode]=false;
+};
+
+var mousePressed=function() {
+    mouse[mouseButton]=true;
+    mousePress[mouseButton]=true;
+};
+var mouseReleased=function() {
+    mouse[mouseButton]=false;
+};
