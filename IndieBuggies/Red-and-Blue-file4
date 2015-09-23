@@ -1,0 +1,720 @@
+/******************************************
+ * Red/Blue - KA Overlords
+ *
+ * Please do not plagiarize or uncredit in some sort of way that disappeals to me.
+ * 
+ * NOT A RIPOFF of Cubix! It's different!
+ * 
+ * Made on May 20th, 2015 at exactly 1:06:39 PM 
+ * 
+ * New player graphics by Kaadmy:
+ * https://www.khanacademy.org/profile/kaadmy/programs
+ *
+ * BIG CREDIT TO Thomas L for his camera function which can be found here: 
+ * https://www.khanacademy.org/computer-programming/platform-function-camera-lighting/6394152010907648
+ * Link to his profile: 
+ * https://www.khanacademy.org/profile/voidx/programs
+ * 
+ * Credit to Ryan Kee for the collision testing, the OBJ api, and the fixtures. Thank you!
+ * Link to his profile: 
+ * https://www.khanacademy.org/profile/RaZiire/programs
+ * 
+ * TODO:
+ * - Add coins (with shop)
+ * - Add teleporters (Like Cubix 2!)
+ * 
+ ***************************************************
+ * Rules for making levels:
+ * 
+ * - Do not make it go off the maximum level text
+ * - Make sure it is possible to beat (You must have beaten it yourself)
+ * - Post level with a spinoff and the link to it (post in Tips & Thanks)
+*******************************************/
+var gameState = "Menu";
+var overButton;
+var v = color(0, 255, 51);
+var vb = color(255, 255, 255);
+var drawButton = function(buttonText, x, y, length, color){
+    var val = v;
+    var buttonHeight = 65;
+    overButton = false;
+    noStroke();
+    fill(0, 0, 0, 100);
+    rect(x - 2, y + 2, length, buttonHeight + 1, 20);
+    if(mouseX >= x && mouseX <= x + length && mouseY >= y && mouseY <= y + buttonHeight){
+        val = vb;
+        overButton = true;
+    }
+    fill(val);
+    rect(x, y, length, buttonHeight, 7.8);
+    textAlign(CENTER, CENTER);
+    fill(0, 0, 0);
+    textSize(31);
+    text(buttonText, x + length / 2, y + buttonHeight / 2);
+};
+var buttonPressed = false;
+var tp = 0;
+var screenColor = [255,0,0];
+/**Keys**/
+var keys = [];
+var keyPressed = function(){
+    keys[keyCode] = true;
+};
+var keyReleased = function(){
+    keys[keyCode] = false;
+};
+/**Mouse**/
+var mouse = [];
+var mousePressed = function(){
+    mouse[mouseButton] = true;
+};
+var mouseReleased = function(){
+    mouse[mouseReleased]=false;
+};
+/**Collisions**/
+var collide = function(obj1,obj2){
+    return( obj1.x<obj2.x+obj2.w&&obj1.x+obj1.w>obj2.x&&
+            obj1.y<obj2.y+obj2.h&&obj1.y+obj1.h>obj2.y);
+};
+/**Camera (Credit to Thomas L for this**/
+var Camera = function(x, y, w, h, cameraX, cameraY, levelWidth, levelHeight, speed){
+    this.x = x;
+    this.y = y;
+    this.w  = w;
+    this.h = h;
+    this.cameraX = cameraX;
+    this.cameraY = cameraY;
+    this.levelWidth = levelWidth;
+    this.levelHeight = levelHeight;
+    this.speed = this.speed || speed; // the lower the number, the faster the speed
+    Camera.prototype.follow = function(ent) {
+        var x = -ent.x+this.x+(this.w/2)-(ent.w/2);
+        var y = -ent.y+this.y+(this.h/2)-(ent.h/2);
+        var a = atan2(y-this.cameraY, x-this.cameraX);
+        var v = dist(x, y, this.cameraX, this.cameraY) / this.speed;
+        this.cameraX += v*cos(a);
+        this.cameraY += v*sin(a);
+        var width  = this.x + this.w  - this.levelWidth;
+        var height = this.y + this.h - this.levelHeight;
+        this.cameraX = min(this.cameraX, this.x);
+        this.cameraX = max(this.cameraX, width);
+        this.cameraY = min(this.cameraY, this.y);
+        this.cameraY = max(this.cameraY, height);
+    };
+    Camera.prototype.view = function(ent) {
+        var cameraX = -this.cameraX+this.x,
+            cameraY = -this.cameraY+this.y,
+            cameraWidth = ent.w-this.w,
+            cameraHeight = ent.w-this.h;
+
+        if(ent.x >  cameraX-ent.w &&
+            ent.x <  cameraX-cameraWidth+ent.w && 
+            ent.y >  cameraY-ent.h &&
+            ent.y <  cameraY-cameraHeight+ent.h){
+                var camView = {
+                    x: (this.cameraX+ent.x),
+                    y: (this.cameraY+ent.y),
+                    w: ent.w,
+                    h: ent.h,
+                    cam: this
+        };
+        
+        return camView;
+    }
+};
+};
+/**Player**/
+var Player = function(x,y,w,h,keyInputs,color){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    
+    this.keyInputs = keyInputs;
+    this.color = color;
+    
+    this.xVEL = 0;
+    this.yVEL = 0;
+    
+    this.maxSpeed = 3;
+    this.accel = 0.25;
+    
+    this.jumping = false;
+    this.jSpeed = 8;
+    this.gravity = 0.4;
+    
+    this.health = 100;
+    this.dead = false;
+    this.spawn={
+        x:this.x,
+        y:this.y
+    };
+    this.deathCounter = 0;
+    
+    this.lightIntensity = 200;
+    this.particles=[];
+    
+    this.lastTele=Infinity;
+    Player.prototype.update = function(blocks){
+        this.lastTele+=5;
+        if(!this.dead){
+            if(keys[this.keyInputs[0]]){
+                this.xVEL+=this.accel;
+            }
+            if(keys[this.keyInputs[1]]){
+                this.xVEL-=this.accel;
+            }
+        
+            if(keys[this.keyInputs[2]]&&!this.jumping){
+                this.yVEL=-this.jSpeed;
+                this.jumping=true;
+            }
+        
+            if(!keys[this.keyInputs[0]]&&!keys[this.keyInputs[1]]){
+                if(this.xVEL>0){
+                    this.xVEL-=this.accel;
+                }
+                if(this.xVEL<0){
+                    this.xVEL+=this.accel;
+                }
+            }
+        
+            if(Math.abs(this.xVEL)>this.maxSpeed){
+                if(this.xVEL>0){
+                    this.xVEL=this.maxSpeed;
+                }
+                if(this.xVEL<0){
+                    this.xVEL=-this.maxSpeed;
+                }
+        }
+    
+            this.x+= this.xVEL;
+            this.applyCollision(blocks,this.xVEL,0);
+        
+            this.jumping = true;
+            this.y+= this.yVEL;
+            this.applyCollision(blocks,0,this.yVEL);
+            this.yVEL+= this.gravity;
+        }
+    
+        if(this.health<=0){
+            this.dead = true;
+        }
+    
+        if(this.dead){
+            this.deathCounter++;
+            if(this.deathCounter>100){
+                this.x=this.spawn.x;
+                this.y=this.spawn.y;
+                this.deathCounter=0;
+                this.dead=false;
+                this.health=100;
+            }
+        }
+};
+    Player.prototype.applyCollision = function(obj,velx,vely){
+        for(var i=0; i<obj.length; i++){
+            if(collide(this,obj[i])){
+                if(vely>0){
+                    this.yVEL = 0;
+                    this.jumping = false;
+                    this.y = obj[i].y-this.h;
+                }
+                if(vely<0){
+                    this.yVEL = 0;
+                    this.jumping = true;
+                    this.y = obj[i].y+obj[i].h;
+                }
+                if(velx<0){
+                    this.xVEL = 0;
+                    this.x = obj[i].x+obj[i].w;
+                }
+                if(velx>0){
+                    this.xVEL = 0;
+                    this.x = obj[i].x-this.w;
+                }
+            }
+    }
+};
+    Player.prototype.draw = function(cam,blocks) {
+        var view = cam.view(this);
+        if(view&&!this.dead){
+            noStroke();
+            
+            pushMatrix();
+            translate(view.x, view.y);
+
+            fill(20, 240, 190);
+            rect(0, 0, view.w, view.h, 4);
+            
+            fill(50);
+            
+            var blink=constrain(map(sin(millis()*0.1), -1, 1, 0, 2000), 0, 8);
+            
+            rect(((view.w/2)+constrain(this.xVEL, -4, 4))-10, constrain(this.yVEL, -4, 4)+4, 5, blink);
+            rect(((view.w/2)+constrain(this.xVEL, -4, 4))+5, constrain(this.yVEL, -4, 4)+4, 5, blink);
+            
+            popMatrix();
+
+            this.particles.length = 0; // (comment from Kaadmy) from what I understand, saying this.particles.length=0 does NOTHING. you should do this.particles=[] to remove them.
+        }
+        else if(view&&this.dead){
+            if(this.particles.length<20){
+                this.particles.push(
+                    {
+                        x:view.x+view.w/2,
+                        y:view.y+view.h/2,
+                        w:view.w/10,
+                        h:view.h/10,
+                        velx:random(-2,2),
+                        vely:-3,
+                        gravity:0.4,
+                        angle:random(-90,-270),
+                        color:this.color
+                    }
+                );
+            }
+        
+        for(var i = 0; i<this.particles.length; i++){
+            var p = this.particles[i];
+            fill(p.color);
+            rect(p.x,p.y,p.w,p.h);
+            
+            p.x+=p.velx;
+            p.y+=p.vely;
+            p.vely+=p.gravity;
+            
+            for(var b = 0; b<blocks.length; b++){
+                if(collide(p,blocks[b])){
+                    if(p.vely>0){
+                        p.vely--;
+                        p.vely =-p.vely;
+                    }
+                }
+            }
+        }
+    }
+};
+    Player.prototype.stats = function(){
+        textSize(30);
+        fill(0, 0, 0);
+        text("Health: "+this.health,15,height/10-6);
+    };
+};
+var players = [];
+players.attachToGame = function(x,y,w,h,keyInputs,color){
+    players.push(new Player(x,y,w,h,keyInputs,color));
+};
+players.apply = function(blocks,cam){
+    for(var i = 0; i<players.length; i++){
+        players[i].update(blocks);
+        players[i].draw(cam,blocks);
+        players[i].stats();
+    }
+};
+/**Block**/
+var Block = function(x,y,w,h,color){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.color = color;
+    Block.prototype.draw = function(cam) {
+        var view = cam.view(this);
+    
+        if(view){
+            noStroke();
+            
+            fill(0, 100, 200);
+            rect(view.x,view.y,view.w,view.h);
+            
+            fill(100, 180, 250);
+            triangle(view.x+2, view.y+2, view.x+10, view.y+2, view.x+2, view.y+10);
+
+            fill(0, 80, 180);
+            rect((view.x+(view.w/2))-4, (view.y+(view.h/2))-4, 8, 8);
+        }
+};
+};
+var blocks = [];
+blocks.attachToGame = function(x,y,w,h,color){
+    blocks.push(new Block(x,y,w,h,color));
+};
+blocks.apply = function(cam){
+    for(var i = 0; i<blocks.length; i++){
+        blocks[i].draw(cam);
+    }
+};
+/**Lava**/
+var lava = function(x,y,w,h){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    lava.prototype.update = function(players){
+        for(var i = 0; i<players.length; i++){
+            if(collide(this,players[i])&&!players[i].dead){
+                players[i].vely =- players[i].jumpHeight;
+                players[i].health -= 5;
+            }
+        }
+    };
+    lava.prototype.draw = function(cam) {
+        var view = cam.view(this);
+    
+        if(view){
+            colorMode(HSB);
+            var h=(sin(millis()*0.15)*12)+12;
+
+            fill(h, 255, 255);
+            colorMode(RGB);
+            rect(view.x,view.y,view.w,view.h);
+        }
+    };
+};
+var lavas = [];
+lavas.attachToGame = function(x,y,w,h){
+    lavas.push(new lava(x,y,w,h));
+};
+lavas.apply = function(cam){
+    for(var i = 0; i<lavas.length; i++){
+        lavas[i].update(players);
+        lavas[i].draw(cam);
+    }
+};
+/**Teleport**/
+var Tele = function(x,y,w,h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    Tele.prototype.update = function(teles, id, cam, players) {
+        var possibleTeles=[];
+        for(var i=0;i<teles.length;i++) {
+            if(i !== id) {
+                possibleTeles.push(teles[i]);
+            }
+        }
+        
+        var r=floor(random(0, possibleTeles.length-0.01));
+        var randomTele=possibleTeles[r];
+        
+        for(var i = 0;i<players.length;i++) {
+            if(collide(this, players[i]) && players[i].lastTele >= 500 && !players[i].dead) {
+                players[i].lastTele=0;
+
+                players[i].x=randomTele.x;
+                players[i].y=randomTele.y;
+
+                players[i].xVEL=0;
+                players[i].yVEL=0;
+            }
+        }
+    };
+    Tele.prototype.draw = function(cam) {
+        var view = cam.view(this);
+    
+        if(view){
+            stroke(200, 50, 200);
+            strokeWeight(2);
+            
+            var s=sin(millis()*0.2)*(view.h/2)+(view.h/2);
+            line(view.x, view.y+s, view.x+view.w, view.y+s);
+            s=cos(millis()*0.3)*(view.h/2)+(view.h/2);
+            line(view.x, view.y+s, view.x+view.w, view.y+s);
+        }
+};
+};
+var teles = [];
+teles.attachToGame = function(x,y,w,h){
+    teles.push(new Tele(x,y,w,h));
+};
+teles.apply = function(cam, players){
+//    debug(teles);
+    for(var i = 0; i<teles.length; i++){
+        teles[i].update(teles, i, cam, players);
+        teles[i].draw(cam);
+    }
+};
+/**Portal (End)**/
+var Portal = function(x,y,w,h){
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.complete = false;
+    Portal.prototype.update = function(players){
+        screenColor = [255,255,255];
+        for(var i=0; i<players.length; i++){
+            if(collide(this,players[i])&&!this.complete){
+                tp+=5;
+            }else if(!collide(this,players[i])&&!this.complete){
+                tp=0;
+            }
+        }
+        if(tp>255){
+            this.complete = true;
+        }
+        if(this.complete){
+            tp-=5;
+            if(tp<0){
+                tp=0;
+                this.complete = false;
+            }
+        }
+    };
+    Portal.prototype.draw= function(cam,players) {
+        var view = cam.view(this);
+    
+        if(view){
+            stroke(0, 200, 100);
+            strokeWeight(3);
+            fill(0, 200, 100, 50);
+
+            ellipseMode(CENTER);
+            
+            pushMatrix();
+            translate(view.x+(view.w/2), view.y+(view.h/2));
+            rotate(millis()*0.1);
+            scale(sin(millis()*0.2), 1);
+            ellipse(0, 0, view.w, view.h);
+            popMatrix();
+
+            pushMatrix();
+            translate(view.x+(view.w/2), view.y+(view.h/2));
+            rotate(millis()*0.10);
+            scale(1, cos(millis()*0.2));
+            ellipse(0, 0, view.w, view.h);
+            popMatrix();
+        }
+    };
+};
+var end = [];
+end.attachToGame = function(x,y,w,h){
+    end.push(new Portal(x,y,w,h));
+};
+end.apply = function(cam,players){
+    for(var i = 0; i<end.length; i++){
+        end[i].update(players);
+        end[i].draw(cam,players);
+    }
+};
+/**OBJ Amplifier**/
+var obj = [players,blocks,lavas,teles,end];
+obj.remove = function(){
+    for(var i = 0; i<obj.length; i++){
+    for(var j = 0; j<obj[i].length; j++){
+        obj[i].splice(j,obj[i].length);
+    }
+    }
+};
+/**Levels**/
+var levels = function(){
+    this.levels = [
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                        ###",
+            "                         T#",
+            "#T                       ##",
+            "##                        #",
+            "#P    A  A  A  A  A  A   @#",
+            "###########################"
+        ],
+        [
+            "                           ",
+            "                           ",
+            "                           ",
+            "                           ",
+            "                         @ ",
+            "                         # ",
+            "                       #   ",
+            "                    #      ",
+            "                 #         ",
+            "              #            ",
+            "           #               ",
+            "        #                  ",
+            "P    #                     ",
+            "###                        "
+        ],
+        [
+            "                           ",
+            "          @                ",
+            "         ###               ",
+            "                           ",
+            "             ###           ",
+            "                           ",
+            "         ###               ",
+            "                           ",
+            "             ###           ",
+            "                           ",
+            "         ###               ",
+            "                           ",
+            "P            ###           ",
+            "###########################"
+        ],
+        [
+            "                           ",
+            "          @                ",
+            "         ###   #       #   ",
+            "                   #       ",
+            "             ###           ",
+            "           #               ",
+            "   ###             #       ",
+            "       ##                  ",
+            "           #        #      ",
+            "                #          ",
+            "               ###         ",
+            "              #####        ",
+            "P            ########      ",
+            "###########################"
+        ],  
+        [
+            "                           ",
+            "   @           T           ",
+            "   #   #A#    ###   #    ##",
+            "                     ##    ",
+            "       #  #A##             ",
+            "                           ",
+            "               #A#         ",
+            "                     #     ",
+            "                           ",
+            "                   # # #   ",
+            "              #            ",
+            "                  # # #    ",
+            "P       # ### ###         T",
+            "###########################"
+        ],
+    ];
+    this.level = 0;
+    this.levelsWidth = [800,400];
+    this.levelsHeight = [400,400];
+    this.cam = new Camera(0,0,width,height,0,0,this.levelsWidth[this.level],this.levelsHeight[this.level],8);
+    levels.prototype.loadMap = function(){
+        for(var col = 0; col<this.levels[this.level].length; col++){
+            for(var row = 0; row<this.levels[this.level][col].length; row++){
+                var txt = this.levels[this.level][col][row];
+                if(txt === "P"){
+                    players.attachToGame(row*30,col*30,30,30,[RIGHT,LEFT,UP,DOWN],color(255, 255, 255,200));
+                } else if(txt === "#"){
+                    blocks.attachToGame(row*30,col*30,30,30,color(20, 20, 20));
+                } else if(txt === "A"){
+                    lavas.attachToGame(row*30,col*30,30,30);
+                } else if(txt === "T"){
+                    teles.attachToGame(row*30,col*30,30,30);
+                } else if(txt === "@"){
+                    end.attachToGame(row*30,col*30,30,30);
+                }
+            }   
+        }
+    };
+levels.prototype.apply = function(){
+    var self = this;
+    
+    this.cam.follow(players[0]);
+    
+    blocks.apply(this.cam);
+    lavas.apply(this.cam, players);
+    teles.apply(this.cam, players);
+    end.apply(this.cam, players);
+    
+    for(var i = 0; i<end.length; i++){
+        if(end[i].complete){
+            self.level++;
+            obj.remove();
+            self.loadMap();
+        }
+    }
+
+    players.apply(blocks,this.cam);
+};
+};
+var levels = new levels();
+levels.loadMap();
+var draw = function() {
+    try{
+    if (gameState === "Menu") {
+        textFont(createFont("Tahoma"));
+        background(0, 255, 255);
+        for(var i = 0; i<width; i++){
+            stroke(lerpColor(color(255, 0, 0), color(0,255,255), i/width));
+            line(i,0,i,width);
+        }
+        fill(255, 255, 255);
+        textSize(58);
+        text("Red & Blue",201,58);
+        fill(0, 0, 0);
+        textSize(26);
+        text("Created by KA Overlords",200,98);
+        drawButton("Play", 95, 120, 218, 5, 30);
+        if(mouseIsPressed && mouseX > 95 && mouseX < (95+218) && mouseY > 120 && mouseY < (120+65)){
+            gameState = "Play";
+        }
+        drawButton("Help", 95, 200, 218, 5, 30);
+        if(mouseIsPressed && mouseX > 95 && mouseX < (95+218) && mouseY > 200 && mouseY < (200+65)){
+            gameState = "Instructions";
+        }
+     
+    }
+    if(gameState === "Play"){
+        textAlign(LEFT,CENTER);
+        background(120, 120, 120);
+        stroke(82, 82, 82);
+        strokeWeight(3);
+        line(0, 50, 100, 50);
+        line(100, 50, 100, 200);
+        line(100, 200, 300, 200);
+        line(300, 200, 300, 400);
+        line(400, 270, 0, 270);
+        line(0, 350, 200, 350);
+        line(180, 350, 180, 0);
+        noFill();
+        rect(100, 245, 100, 39);
+        rect(50, 100, 30, 59);
+        rect(300, 50, 86, 39);
+        rect(290, 260, 37, 47);
+        rect(166, 82, 90, 58);
+        rect(37, 190, 93, 107);
+        rect(137, 324, 93, 107);
+        ellipse(228, 324, 37, 36);
+        ellipse(167, 135, 37, 36);
+        ellipse(28, 300, 37, 36);
+        ellipse(302, 55, 37, 36);
+        ellipse(296, 205, 37, 36);
+        ellipse(83, 92, 37, 36);
+        fill(255, 0, 0);
+        noStroke();
+        fill(255, 255, 255, 20);
+        pushMatrix();
+        rotate(61);
+        translate(0, -110);
+        rect(0, 0, 800, 50);
+        rect(0, 70, 800, 20);
+        popMatrix();
+        levels.apply();
+        noStroke();
+        fill(255, 0, 255, tp);
+        rect(0, 0, width, height);
+    }
+    if(gameState === "Instructions"){
+        background(0, 247, 255);
+        fill(255, 255, 255);
+        textSize(100);
+        text("Help",208,52);
+        textSize(20);
+        text("Avoid getting killed by the spikes.\n\nTHIS IS NOT A RIP OFF of Cubix 2. Both\nprograms are different! Also, I gave credit\nto some people, check the top of code for\nmore info. ",201,200);
+        drawButton("Back",33,316,100,5,25);
+        if(overButton&&mouseIsPressed){
+            gameState = "Menu";
+        }
+    }
+    } catch(e){
+        println("You either finished the game, or this is an error. Anyways, thanks for looking at this. Please give me feedback on it!");
+    }
+};
