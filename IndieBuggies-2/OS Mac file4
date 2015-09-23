@@ -1,0 +1,1797 @@
+/***************************
+ * Before you accuse me of copying, read the section below.
+ ************************************************************
+ * The credits section: (People's things I used.)
+ * MAIN CREDIT: coderman64 (For the slider and the app function.)
+ * Other credits:
+ * Winston: For the app 'Android Clicker'.
+ * Ben Rowan: For 'Painter Pro 2000'.
+ * Matthias: For 'XYGraph'
+ * Will Early: For 'SpacePath'
+ * Akshat An and Timestopper: For 'RedBall' levels.
+ ************************************************************
+ * When making an app, follow these rules:
+ * 1. Make sure the app doesn't exceed over 600 lines of code.
+ * 2. Make the game a good game, something that isn't boring!
+ ************************************************************
+*/
+var time = 0;  // time in seconds
+var t0 = 0;         // previous clock time
+var pause = false;
+var cool = 0; // Try it out :D
+var boundaries = 0; // Show orbital boundaries
+var paths = 0; // Show orbital paths
+var trail = 1; // Show lunar trail
+var fade = 1; // Fade the lunar trail
+var slow = 250; // Animation speed reduction
+var steps = 1000; // How many points to plot
+var precision = 0.4; // Plotting precision
+var centre = { x: 200, y: 200 };
+var distances = { EarthSun: 150, MoonEarth: 38 };
+var orbital_periods = { Earth: 365, Moon: 27 };
+var orbital_velocities = {
+    Earth: 360 / orbital_periods.Earth,
+    Moon: 360 / orbital_periods.Moon };
+var delta_t = 0; var time = 0;
+var images = {
+    Sun: getImage("cute/Star"),
+    Earth: getImage("space/planet")
+};
+var plot = function (count, precision, weight) {
+    var before = time;
+    var new_weight = weight;
+    var j = -1, k = 0;
+    // j, k and c are used to fade the colour
+
+	for (var i=count; i>0; i--) {
+		time += precision * i / count;
+		new_weight = weight * (1 - i / count);
+		strokeWeight(new_weight);
+		if (new_weight > 1) {
+            if (fade) {
+                if (j===-1) { j = 0; k = count - i; }
+                var c = round(1.5*255*((j++) / k)^2);
+                stroke(c,c,c);
+            }
+            
+			point(centre.x + distances.EarthSun * cos(orbital_velocities.Earth * time) + distances.MoonEarth * cos(orbital_velocities.Moon * time), centre.y + distances.EarthSun * sin(orbital_velocities.Earth * time) + distances.MoonEarth * sin(orbital_velocities.Moon * time));
+		}
+	}
+	return time - before;
+};
+var orbit = function(centre, radius, weight) {
+	strokeWeight(weight);
+	ellipse(centre.x, centre.y, 2*radius, 2*radius);
+};
+var scal = -45,
+angS = 1.8;
+var angle = -200;
+var y0 = scal * tan(angle);
+var y1 = scal * cos(angle);
+var y2 = scal * sin(angle);
+var walking = false;
+var macMode = false;//mode designed for a 1-button mouse
+var Skies = true;//the "sun" setting
+var underbc = true;//turn on and off the background shown underground
+var curBlock = 1;//current selected block
+if(macMode === true){
+    curBlock = 0;
+}
+var sc1 = 3;//scale
+var keys = [];
+var slev = 19;//sealevel(for world engine)
+var characterloc = [16*50+5,16*(slev-2)]; //location
+var feet = 0; //collision variables
+var frn = 0;
+var bck = 0;
+var top = 0;
+var bftop = [];
+var dir = 1; //facing direction ( 1:foreward, -1:backward)
+var clouds = [0,0,0]; //stores cloud location and scale: [x,y,s]
+var air = 8; //set air
+var time = 40; //starting time
+var stars = []; //stores star locations
+var night = false; //tells day from night
+var mouseIn = function(x,y,w,h){
+    if(mouseX>x&mouseY>y&mouseX<x+w&mouseY<y+h){
+        return true;
+    }else{
+        return false;
+    }
+};
+for(var i = 0;i<200;i++){
+    stars[i] = random(0,400);
+}
+var worldSpawn = function(www,sl,width,height){
+    for(var b = 0;b<height;b++){
+        www[b] = [];
+        for(var n = 0;n<width;n++){
+            if(b === sl){
+                //ponds and grass
+                if(min(random(-3,2),1) === 1 & www[b-1][n] !== 3 & (n > 53|n<50)){
+                    www[b][n]=5;
+                    www[b][n-1]=5;
+                    www[b][n-2]=5;
+                }else{
+                    www[b][n] = 1;
+                }
+            }else{
+            if(b === sl-1 & n !== 50){
+                //trees
+                if(1 === min(random(-5,2),1)){
+                    www[b][n] = 3;
+                    www[b-1][n] = 3;
+                    www[b-2][n] = 4;
+                    www[b-2][n-1] = 4;
+                    www[b-2][n+1] = 4;
+                    www[b-3][n] = 4;
+                }else{
+                    www[b][n] = 0;
+                }
+            }else{if(n > sl+1){
+                //rock (underground)
+                www[b][n] = 2;
+            }else{if(b > sl){
+                //dirt
+                www[b][n] = 6;
+            }else{
+                //air
+                www[b][n] = 0;
+            }}}}
+            
+        }
+        www[floor(characterloc[1]/16)][floor(characterloc[0]/16)] = 0;
+    }
+    return www;
+    
+};
+var sl = 0;
+var worldNoise = function(www,w,h){
+    for(var i = 0;i<h;i++){
+        www[i] = [];
+        for(var b = 0;b<w;b++){
+        }
+    }
+    for(var i = 0;i<w;i++){
+        www[sl][i] = 1;
+        sl = round(noise(i*0.02)*h);
+        for(var n = 0; n < h ; n++){
+            if(www[n][i] !== 4){
+                www[n][i] = 0;
+            }
+            if(n>sl){
+                www[n][i] = 2;
+            }
+            if(sl<=slev+1){
+                www[sl][i] = 1;
+            }
+            if(n>slev){
+                if(www[n][i] === 0){
+                    www[n][i] = 5;
+                }
+            }
+            if(n-1 > 0){
+                if((www[n-1][i] === 5 || www[n-1][i] === 1)&&(www[n][i] !== 5)){
+                    www[n-1][i] = 6;
+                    www[n][i]=6;
+                }
+            }
+        }
+        if(min(random(1,7),5) === 5 && sl<slev){
+            www[sl-1][i] = 3;
+            www[sl-2][i] = 3;
+            www[sl-3][i-1] = 4;
+            www[sl-3][i+1] = 4;
+            www[sl-3][i] = 4;
+            www[sl-4][i] = 4;
+        }
+    }
+    return www;
+};
+var world = [];
+var anim = 0;
+var bobx = 0;
+var boby = 0;
+noStroke();
+world = worldNoise(world,400,40); 
+var backo = [];
+for(var i = 0;i<world.length;i++){
+    backo[i] = [];
+    for(var b = 0;b<world[i].length;b++){
+        if(world[i][b] === 2){
+            backo[i][b] = true;
+        }
+    }
+}
+var inWorld = function(x,y){
+    if(y/16 > world.length |  y < 0){
+        return false;
+    }else{if(x/16 > world[slev].length | x < 0){
+        return false;
+    }else{
+        return true;
+    }}
+};
+var cont = function(){
+    noCursor();
+    bobx = pmouseX/16/sc1+characterloc[0]/16-12.6/sc1;
+    boby = pmouseY/16/sc1+characterloc[1]/16-9.5/sc1;
+    bobx = floor(bobx);
+    boby = floor(boby);
+    fill(255, 255, 255,50);
+    if(inWorld(bobx,boby)){
+        if(world[boby][bobx] !== 0 && world[boby][bobx] !== 8){
+            //highlight a solid block
+            rect(bobx*16*sc1,boby*16*sc1,16*sc1,16*sc1);
+        }
+        if(world[boby][bobx] === 8){
+            //hightight a torch
+            rect(bobx*16*sc1+7*sc1,boby*16*sc1+6*sc1,2*sc1,10*sc1);
+        }
+    }
+    if(mouseIsPressed === true & mouseIn(300,370,100,30) !== true){
+        //mouse left and right button controls
+        if(mouseButton === LEFT){
+            if(inWorld(bobx,boby)){
+                if(macMode === true){
+                    world[boby][bobx] = curBlock;
+                }else{
+                    world[boby][bobx] = 0;
+                }
+            }
+        }
+        if(mouseButton === RIGHT){
+            if(inWorld(bobx,boby)){
+                world[boby][bobx] = curBlock;
+            }
+        }
+    }
+};
+var learn = false;
+var flow = function(){
+    for(var y = 0;y<world.length;y++){
+        for(var x = 0;x<world[y].length;x++){
+            if(world[y][x] === 5){
+                if(world[y+1][x] === 0 | world[y+1][x] === 5){
+                    world[y+1][x] = 5;
+                }else{if(world[y][x+1] === 0){
+                    world[y][x+1] = 5;
+                }
+                if(world[y][x-1] === 0){
+                    world[y][x-1] = 5;
+                }
+                }
+            }
+        }
+    }
+};
+var character = function(x,y,back){
+    x = x*sc1;
+    y = y*sc1;
+    translate(x,y);
+    pushMatrix();
+    translate(2*sc1,21*sc1);
+    rectMode(CENTER);
+    if(keyIsPressed === true){
+        if(walking === true){
+        if((anim > 0 & anim < 4)){
+        fill(2, 2, 196);
+        rotate(55);
+        rect(5.5*sc1,0,11*sc1,4*sc1);
+        rotate(-20);
+        
+        }else{if((anim > 8 & anim < 12)){
+            fill(0, 0, 143);
+        rotate(125);
+        rect(5.5*sc1,0,11*sc1,4*sc1);
+        rotate(-155);
+        }
+            rotate(0);
+        }}
+    }
+    fill(4, 0, 255);
+    rect(0,5.5*sc1,4*sc1,11*sc1);
+    rectMode(CORNER);
+    popMatrix();
+    fill(0, 200, 255);
+    rect(0,0,4*sc1,21*sc1);
+    pushMatrix();
+    //head
+    fill(255, 242, 161);
+    rect(-2*sc1,0,8*sc1,8*sc1);
+    fill(82, 52, 1);
+    rect(-2*sc1,0,8*sc1,2*sc1);
+    rect(1*sc1-2*sc1*(back*1.5),0,2*sc1,5*sc1);
+    popMatrix();
+    //arm
+    fill(255, 242, 161);
+    translate(2*sc1,10*sc1);
+    if(mouseIsPressed === true){
+        rotate(120*back);
+    }else{
+        rotate(180);
+    }
+    rectMode(CENTER);
+    rect(0,-5*sc1,4*sc1,10*sc1);
+    fill(0, 187, 255);
+    rect(0,0*sc1,4*sc1,4*sc1);
+    rectMode(CORNER);
+    resetMatrix();
+};
+var grass = function(x,y) {
+    fill(115, 86, 0);
+    rect(x*sc1,y*sc1,16*sc1,16*sc1);
+    fill(0, 115, 0);
+    rect(x*sc1,y*sc1,16*sc1,3*sc1);
+};
+var stone = function(x,y) {
+    fill(128, 128, 128);
+    rect(x*sc1,y*sc1,16*sc1,16*sc1);
+};
+var wood = function(x,y) {
+    fill(99, 83, 0);
+    rect(x*sc1,y*sc1,16*sc1,16*sc1);
+    fill(61, 34, 0);
+    rect(x*sc1,y*sc1,2*sc1,16*sc1);
+    rect((x+14)*sc1,y*sc1,2*sc1,16*sc1);
+};
+var leaves = function(x,y) {
+    fill(34, 255, 0);
+    rect(x*sc1,y*sc1,16*sc1,16*sc1);
+};
+var water = function(x,y) {
+    fill(0, 0, 255,90);
+    rect(x*sc1,y*sc1,16*sc1,16*sc1);
+    if(world[y/16+1][floor(x/16)] === 5){
+        fill(0, 251, 255);
+        rect(x*sc1,(y+anim)*sc1,16*sc1,1);
+    }
+};
+var dirt = function(x,y) {
+    fill(115, 86, 0);
+    rect(x*sc1,y*sc1,16*sc1,16*sc1);
+};
+var planks = function(x,y){
+    fill(209, 161, 2);
+    rect(x*sc1,y*sc1,16*sc1,16*sc1);
+    fill(122, 96, 0);
+    for(var i = 0; i< 16; i = i+4){
+        rect(x*sc1,(y+i)*sc1,16*sc1,1*sc1);
+    }
+};
+var torche = function(x,y){
+    fill(255, 145, 0,160-anim*11);
+    ellipse(x*sc1+8*sc1,y*sc1+(15-anim*1.5)/2*sc1,7-(anim/7)*sc1,4*sc1);
+    ellipse(x*sc1+8*sc1,y*sc1+(19-anim*1.5)/2*sc1,7-(anim/28)*sc1,4*sc1);
+    rectMode(CORNER);
+    fill(102, 73, 0);
+    rect(x*sc1+7*sc1,y*sc1+6*sc1,2*sc1,10*sc1);
+    fill(255, 238, 0);
+    rect(x*sc1+7*sc1,y*sc1+6*sc1,2*sc1,2*sc1);
+};
+var ladder = function(x,y){
+    fill(153, 99, 0);
+    rect(x*sc1,y*sc1,2*sc1,16*sc1);
+    rect(x*sc1+14*sc1,y*sc1,2*sc1,16*sc1);
+    for(var i = 0; i < 4;i++){
+        rect(x*sc1,y*sc1+i*4*sc1+1*sc1,16*sc1,2*sc1);
+    }
+};
+var block = function(x,y,type){
+    x = x*16;
+    y = y*16;
+    if(type === 1){
+        grass(x,y);
+    }
+    if(type === 2){
+        stone(x,y);
+    }
+    if(type === 3){
+        wood(x,y);
+    }
+    if(type === 4){
+        leaves(x,y);
+    }
+    if(type === 5){
+        water(x,y);
+    }
+    if(type === 6){
+        dirt(x,y);
+    }
+    if(type === 7){
+        planks(x,y);
+    }
+    if(type === 8){
+        torche(x,y);
+    }
+    if(type === 9){
+        ladder(x,y);
+    }
+};
+var blockSel = function(){
+    fill(115, 115, 115);
+    rect(0,0,width,16*sc1);
+    for(var i = 0;i < 10;i++){
+        block(i-curBlock,0,i);
+        if(i === 0){
+            noFill();
+            stroke(255, 0, 0);
+            rect((i-curBlock)*16*sc1,0,16*sc1-1,16*sc1-1);
+            line((i-curBlock)*16*sc1,0,(i-curBlock+1)*16*sc1,16*sc1);
+            line((i-curBlock+1)*16*sc1,0,(i-curBlock)*16*sc1,16*sc1);
+            noStroke();
+        }
+    }
+    fill(0, 0, 0,50);
+    rect(16*sc1,0,384,16*sc1);
+    fill(255, 255, 255,50);
+    rect(0,0,16*sc1,16*sc1);
+    fill(255, 255, 255);
+    if(learn === false){
+        text("Press s to change blocks ",16*sc1,12);
+    }
+};
+var game = function() {
+    if(time < 200){
+        background(0, 238, 255);
+        night = false;
+    }else{
+        background(0, 10, 61);
+        night = true;
+    }
+    if(time<-125 | (time>160&time<200)){
+        background(255, 132, 0);
+    }
+    if(time>575|(time>199&time<225)){
+        background(120, 114, 1);
+    }
+    translate(-characterloc[0]*sc1+200,-characterloc[1]*sc1+150);
+    fill(92, 92, 92);
+    fill(71, 71, 71);
+    rect(0,(world.length)*16*sc1,world[1].length*16*sc1,400);
+    for(var i = 0;i<world[1].length;i++){
+        for(var c12 = 0;c12<world.length;c12++){
+            if(i>(characterloc[0]/16)-10 & i < (characterloc[0] / 16) + 10 & c12 < (characterloc[1]/16)+10){
+                if(backo[c12][i] === true && underbc){
+                    fill(99, 99, 99);
+                    rect(i*16*sc1,c12*16*sc1,16*sc1,16*sc1);
+                }
+                fill(0, 0, 0);
+                block(i,c12,world[c12][i]);
+                if(world[c12][i] !== 0 & night === true & (i*16)>(characterloc[0]-200)&(i*16<characterloc[0]+200)&c12*16<characterloc[1]+200 & world[c12][i] !== 8){
+                    fill(0, 0, 0,100);
+                    rect(i*16*sc1,c12*16*sc1,16*sc1,16*sc1);
+                }
+                if(world[c12][i] === 1&&world[c12-1][i] !== 0){
+                    if(anim === 5){
+                        world[c12][i] = 6;
+                    }
+                }
+                if(world[c12][i] === 6&&world[c12-1][i] ===  0){
+                    if(anim === 5){
+                        world[c12][i] = 1;
+                    }
+                }
+            }
+        }
+    }
+    if(night === true){
+        for(var yo = 0;yo<40;yo++){
+            for(var xo = 0;xo<100;xo++){
+                if(world[yo][xo] === 8){
+                    fill(255, 221, 0,50);
+                    rect(xo*16*sc1-32*sc1,yo*16*sc1-32*sc1,80*sc1,80*sc1);
+                }
+            }
+        }
+    }
+    walking = false;
+    if(keyIsPressed === true){
+        if((keys[39] === true || keys[68] === true) &(frn[0] === 0 | frn[0] === 5 | frn[0] === 8 | frn[0] === 9)&(bftop[1] === 0 | bftop[1] === 5 | bftop[1] === 8 | bftop[1] === 9)){
+        characterloc[0] = characterloc[0]+5/sc1;
+        dir = 1;
+        walking = true;
+    }if((keys[37] === true||keys[65] === true) & (bck === 0 | bck === 5 | bck === 8 | bck === 9)&(bftop[0] === 0 | bftop[0] === 5 | bftop[0] === 8 | bftop[0] === 9)){
+        characterloc[0] = characterloc[0]-(5/sc1);
+        dir = -1;
+        walking = true;
+    }if((keys[38] === true|keys[32] === true||keys[6] === true||keys[78] === true) & (feet !== 0 & feet !== 8) & (top === 0|top === 8|top === 9|top === 5)){
+        if(world[floor(characterloc[1]/16+1)][floor(characterloc[0]/16)] === 9 | world[floor(characterloc[1]/16+1)][floor(characterloc[0]/16)] === 5){
+            characterloc[1] = characterloc[1]-3*sc1;
+        }else{
+            characterloc[1] = characterloc[1]-9*sc1;
+        }
+    }
+    text(keyCode,0,0);
+    }
+    anim++;
+    if(anim>16){
+        anim = 0;
+    }
+    cont();
+    if(inWorld(characterloc[0],characterloc[1]-1)&inWorld(characterloc[0],characterloc[1]+3)){
+        feet = world[floor(characterloc[1]/16+2)][floor(characterloc[0]/16)];
+        frn = [world[floor(characterloc[1]/16+1.5)][floor(characterloc[0]/16+0.5)],world[floor(characterloc[1]/16+0.5)][floor(characterloc[0]+0.5)]];
+        bck = world[floor(characterloc[1]/16+1.5)][floor(characterloc[0]/16-0.3)];
+        top = world[floor(characterloc[1]/16-1)][floor(characterloc[0]/16)];
+        bftop = [world[floor(characterloc[1]/16)][floor(characterloc[0]/16-0.3)],world[floor(characterloc[1]/16)][floor(characterloc[0]/16+0.5)]];
+        //gets hurt when drowning and if head is in a block
+        if(world[floor(characterloc[1]/16)][floor(characterloc[0]/16)] !== 0&anim === 16&world[floor(characterloc[1]/16)][floor(characterloc[0]/16)] !== 8&world[floor(characterloc[1]/16)][floor(characterloc[0]/16)] !== 9){
+            if(world[floor(characterloc[1]/16)][floor(characterloc[0]/16)] === 5){
+                air--;
+                
+            }
+        }else{
+            //reload air
+            if(anim === 16){
+                air = 8;
+            }
+        }
+    }
+    //call draw characteracter
+    character(characterloc[0],characterloc[1],dir);
+    
+    //characteracter gravity
+    if(feet === 0 | feet === 5 | feet === 8 | feet === 9){
+        characterloc[1]=characterloc[1]+2;
+    }
+    if(anim === 16){
+        flow();
+        time = time+1;
+    }
+    resetMatrix();
+    blockSel();
+    for(var i = 1;i <= air;i++){
+        if(air<8){
+            fill(173, 255, 241,100);
+            stroke(84, 141, 255);
+            ellipse(16*i+i+260,16*sc1+8,16,16);
+            //image(e,16*i+i+252,16*sc1,16,16);
+            noStroke();
+        }
+    }
+    stroke(255, 255, 255,200);
+    line(mouseX,mouseY-8,mouseX,mouseY+8);
+    line(mouseX-8,mouseY,mouseX+8,mouseY);
+    noStroke();
+    if(mouseX > 205){
+        dir = 1;
+    }
+    if(mouseX < 205){
+        dir = -1;
+    }
+};
+var loc = 0;
+var spdloc = 0;
+var dd = day(); 
+var mm = month();
+var yy = year();
+var a = 0;
+var b = 0;
+var numF = 0;
+var Fs = 50;
+var numS = 0;
+var Ss = 25;
+var numM = 0;
+var Ms = 5;
+var numW = 0;
+var Ws = 1;
+var c = color(47, 199, 34);
+var android = function(x, y){
+   noStroke();
+
+fill(c); // Green color
+
+ellipse(x+80, y+25, 100, 100); // Head
+
+fill(255, 255, 255); // White color
+
+rect(x+20, y+25, 127, 50); // White rectangle to cover up bottom of head
+
+fill(c); // Green color
+
+rect(x+30, y+32, 100, 100); // Body
+
+rect(x+5, y+42, 20, 75); // Left arm
+
+rect(x+135, y+42, 20, 75); // Right arm
+
+ellipse(x+15, y+41, 20, 20); // Top of left arm
+
+ellipse(x+145, y+41, 20, 20); // Top of right arm
+
+ellipse(x+15, y+118, 20, 20); // Bottom of left arm
+
+ellipse(x+145, y+118, 20, 20); // bottom of right arm
+
+rect(x+44, y+110, 20, 50); // Left leg
+
+rect(x+99, y+110, 20, 50); // Right leg
+
+ellipse(x+54, y+160, 20, 20); // Bottom of left leg
+
+ellipse(x+109, y+160, 20, 20); // Bottom of right leg
+
+stroke(c); // Green color
+
+line(x+27, y-50, x+81, y+14); // left thingy
+
+line(x+127, y-50, x+81, y+14); // Right thingy
+
+fill(255, 255, 255); // White
+
+ellipse(x+53, y+3, 10, 10); // Left eye
+
+ellipse(x+102, y+3, 10, 10); // Right eye 
+};
+var mouseClicked = function(){
+    if(mouseX > 50){
+      a++;  
+    }
+    if(mouseX < 50){
+    if(mouseY < 50 && a >=1000){
+       numF++;
+       a-=1000;
+    }else if(mouseY < 100 && mouseY > 50 && a >= 500){
+       numS++;
+       a-=500;
+    }else if(mouseY < 150 && mouseY > 100 && a >=100){
+       numM++;
+       a-=100;
+    }else if(mouseY < 200 && mouseY > 150 && a >= 25&&numW<=10){
+       numW++;
+       a-=25;
+    }
+}
+};
+//Some features were made by coderman64
+var keys=[];
+var keyPressed=function() {
+    keys[keyCode]=true;
+    if (keyCode === 80 && !pause) {
+        pause = 1;
+    } else if (pause) {
+        pause = 0;
+    }
+};
+var keyReleased=function(){
+    keys[keyCode]=false;
+};
+var level = 1;
+var finished = 0;
+var cube = function (x,y,w,h) {
+    this.x = x; 
+    this.y = y;
+    this.w = w; 
+    this.h = h;
+};
+cube.prototype.display = function() {
+    fill(0, 0, 0);
+    stroke(random(0,255));
+    rect(this.x,this.y,this.w,this.h);
+};
+var cubes = [];
+var addcube = function (xPosition, yPosition, width, height) {
+    cubes.push(new cube(xPosition, yPosition, width, height) );
+};
+var displaycubes = function() {
+    for (var i = 0; i < cubes.length; i++) {
+        cubes[i].display();
+    }
+};
+var lava = function (x,y,w,h) {
+    this.x = x; 
+    this.y = y;
+    this.w = w; 
+    this.h = h;
+};
+lava.prototype.display = function() {
+    stroke(255, 0, 0);
+    fill(255, 0, 0);
+    rect(this.x,this.y,this.w,this.h);
+};
+var lavas = [];
+var addlava = function(xPosition, yPosition, width, height) {
+    lavas.push( new lava(xPosition, yPosition, width, height) );
+};
+var displaylavas = function() {
+    for (var i = 0; i < lavas.length; i++) {
+        lavas[i].display();
+    }
+};
+var end = {
+    x : 0,
+    y : 0,
+    w : 0,
+    h : 0,
+};
+var updateend = function (x,y,w,h) {
+    end.x = x;
+    end.y = y;
+    end.w = w;
+    end.h = h;
+};
+var displayend = function () {
+    stroke(255, 255, 255);
+    fill(255, 255, 255);
+    rect(end.x, end.y, end.w, end.h);
+};
+var you = function(x,y,w,h) {
+    this.x = x; this.y = y;
+    this.w = width/(300/w); this.h = height/(300/h);
+    this.xVelocity = 0;
+    this.yVelocity = 0;
+    this.falling = true;
+    
+    this.gravity = height/(400/0.4);
+    this.jumpHeight = height/(400/8);
+    this.maxFallSpeed = height/(400/12);
+    
+    this.moveSpeed = width/(400/0.5);
+    this.maxMoveSpeed = width/(400/5);
+    
+    this.spawnX = 0;
+    this.spawnY = 0;
+    this.deaths = 0;
+    this.fr = 0;
+};
+you.prototype.update = function () {
+    if(keys[LEFT]) { this.xVelocity -= this.moveSpeed; }
+    if(keys[RIGHT]){ this.xVelocity += this.moveSpeed; }
+        
+    if(!keys[LEFT] && !keys[RIGHT]) {
+        if(this.xVelocity>0) {
+            this.xVelocity -= this.moveSpeed;
+        }
+        if(this.xVelocity<0) {
+            this.xVelocity += this.moveSpeed;
+        }
+        if(this.xVelocity<0.1&&this.xVelocity>0){this.xVelocity=0;}
+        if(this.xVelocity>-0.1&&this.xVelocity<0){this.xVelocity=0;}
+    }
+    if(keys[UP] && !this.falling) {
+        this.yVelocity = -this.jumpHeight;
+    }
+        
+    this.yVelocity += this.gravity;
+        
+    if(this.yVelocity > this.maxFallSpeed) {
+        this.yVelocity = this.maxFallSpeed;}
+        
+    if(this.xVelocity > this.maxMoveSpeed) {
+        this.xVelocity = this.maxMoveSpeed;}
+            
+    if(this.xVelocity < -this.maxMoveSpeed) {
+        this.xVelocity = -this.maxMoveSpeed;}
+    this.x += this.xVelocity;
+    this.collideWith(this.xVelocity,0);
+    this.falling = true;
+        
+        
+    this.y += this.yVelocity;
+    this.collideWith(0,this.yVelocity);
+    if (this.fr > 0) {
+        this.fr--;
+    }
+};
+you.prototype.collideWith = function(xv, yv) {
+    for (var i = 0; i < cubes.length; i++) {
+        var b = cubes[i];
+        if( this.y+this.h > b.y &&
+            this.y        < b.y+b.h &&
+            this.x+this.w > b.x &&
+            this.x        < b.x+b.w) {
+            if(yv>0) {
+                this.yVelocity = 0;
+                this.falling = false;
+                this.y = b.y-this.h;
+            }
+            if(yv<0) {
+                this.yVelocity = 0;
+                this.falling = true;
+                this.y = b.y+b.h;
+            }
+            if(xv>0) {
+                this.xVelocity = 0;
+                this.x = b.x-this.w;
+            }
+            if(xv<0) {
+                this.xVelocity = 0;
+                this.x = b.x+b.w;
+            }
+        }
+    }
+    for (var i = 0; i < lavas.length; i++) {
+        var o = lavas[i];
+        if( this.y+this.h > o.y &&
+            this.y        < o.y+o.h &&
+            this.x+this.w > o.x &&
+            this.x        < o.x+o.w &&
+            this.fr ===     0)
+        {
+            this.x = this.spawnX;
+            this.y = this.spawnY;
+            this.deaths++;
+        }
+    }
+    var g = end;
+    if( this.y+this.h > g.y &&
+        this.y        < g.y+g.h &&
+        this.x+this.w > g.x &&
+        this.x        < g.x+g.w) {
+        if (frameCount > finished + 50) {
+            level += 1;
+            finished = frameCount;
+        }
+    }
+};
+you.prototype.display = function() {
+    noStroke();
+    fill(255, 255, 255);
+    rect(this.x,this.y,this.w,this.h,4);
+};
+var levels = [
+    [
+        ["11111111111111111111",""],
+        ["1                  1"],//2 : spawn
+        ["1                  1"],//1 : cube
+        ["1                  1"],//$ : coin
+        ["1                  1"],//4 : end
+        ["1                  1"],//3 : lava
+        ["1                  1"],//& : power-up
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1        33        1"],
+        ["12  $   &11&  $   41"],
+        ["11111111111111111111"],
+    ],
+    [
+        ["11111111111111111111","Level 1 Intro To Parkour"],
+        ["1                  1"],//2 : spawn
+        ["1                  1"],//1 : cube
+        ["1                  1"],//$ : coin
+        ["1                  1"],//4 : end
+        ["1                  1"],//3 : lava
+        ["1                  1"],//& : power-up
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["12                41"],
+        ["11133113311331133111"],
+        ["11111111111111111111"],
+        ["11111111111111111111"],
+    ],
+    [
+        ["11111111111111111111","Level 2 More Parkour"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1        33        1"],
+        ["1       1111       1"],
+        ["1     31111113     1"],
+        ["1    1111111111    1"],
+        ["1  31111111111113  1"],
+        ["1 111111111111111111"],
+        ["11111111111111111111"],
+        ["11111111111111111111"],
+    ],
+    [
+        ["11111111111111111111","Level 3 Even More Parkour"],
+        ["1                  1"],//2 : spawn
+        ["12                 1"],//1 : cube
+        ["113311331133113311 1"],//$ : coin
+        ["111111111111111111 1"],//4 : end
+        ["1                  1"],//3 : lava
+        ["1                  1"],//& : power-up
+        ["1                  1"],
+        ["1                  1"],
+        ["1 113311331133113311"],
+        ["1 111111111111111111"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["111331133113311331 1"],
+        ["111111111111111111 1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["14                 1"],
+        ["11111111111111111111"],
+    ],
+    [
+        ["11111111111111111111","Level 4"],
+        ["12                 1"],//2 : spawn
+        ["11                 1"],//1 : cube
+        ["111                1"],//$ : coin
+        ["1111               1"],//4 : end
+        ["11111              1"],//3 : lava
+        ["111111             1"],//& : power-up
+        ["1111111            1"],
+        ["11111111           1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["13333333333333    41"],
+        ["11111111111111111111"],
+    ],
+    [
+        ["11111111111111111111","Level 5 The Slopes"],
+        ["1                  1"],//2 : spawn
+        ["1                  1"],//1 : cube
+        ["12                 1"],//$ : coin
+        ["111   11  13       1"],//4 : end
+        ["1 1   11   13      1"],//3 : lava
+        ["1 133311333313     1"],//& : power-up
+        ["1 1111111111113    1"],
+        ["1             1    1"],
+        ["1                  1"],
+        ["1                111"],
+        ["1                  1"],
+        ["1        11111     1"],
+        ["1      3 3         1"],
+        ["1     3 3          1"],
+        ["1    3 3           1"],
+        ["1   3 3            1"],
+        ["14 3 3             1"],
+        ["13333333333333333331"],
+        ["11111111111111111111"],
+    ],
+    [
+        ["11111111111111111111","Level 6 The Infinity Jump!"],
+        ["1                  1"],//2 : spawn
+        ["1                  1"],//1 : cube
+        ["1                  1"],//$ : coin
+        ["1                  1"],//4 : end
+        ["12                 1"],//3 : lava
+        ["11113           3111"],//& : power-up
+        ["1   13         31  1"],
+        ["1    13       31   1"],
+        ["1     13     31    1"],
+        ["1      13   31     1"],
+        ["1       13 31      1"],
+        ["1   3    1 1   3   1"],
+        ["1    3        3    1"],
+        ["1     3      3     1"],
+        ["1                  1"],
+        ["13333333334333333331"],
+        ["11111111111111111111"],
+        ["13333333333333333331"],
+        ["11111111111111111111"],
+    ],
+    [
+        ["11111111111111111111","Level 7 By YugalG Really Easy!"],
+        ["1                  1"],//2 : spawn
+        ["12                 1"],//1 : cube
+        ["1                  1"],//$ : coin
+        ["1                  1"],//4 : end
+        ["1                  1"],//3 : lava
+        ["1                  1"],//& : power-up
+        ["111111111111       1"],
+        ["11111111111111111  1"],
+        ["1333333333333333   1"],
+        ["11111111111111111  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1                  1"],
+        ["1         3333     1"],
+        ["14        1111     1"],
+        ["11111111111111111111"],
+    ]
+        
+];
+level = 1;
+var number;
+var you = new you(0,0,15,15);
+var screenSize = 20;
+var drawLevel = function (level) {
+    for(var i = 0; i < level.length; i++) {
+        for(var j = 0; j < level[i][0].length; j++) {
+            number = level[i][0][j];
+            if(number === "1") {
+                addcube(j*width/screenSize, i*height/screenSize, width/screenSize, height/screenSize);
+            } else if (number === "2") {
+                you.spawnX = j*width/screenSize;
+                you.spawnY = i*height/screenSize;
+            } else if (number === "3") {
+                addlava(j*width/screenSize, i*height/screenSize, width/screenSize, height/screenSize);
+            } else if (number === "4") {
+                updateend(j*width/screenSize, i*height/screenSize, width/screenSize, height/screenSize);
+        }
+        }
+    }
+};
+drawLevel(levels[level]);
+var plevel = 1;
+var nextlevel = function () {
+    if (level > plevel && level <= levels.length -1) {
+        plevel = level;
+        cubes = [];
+        lavas = [];
+        you.fr = 0;
+        drawLevel(levels[level]);
+        you.x = you.spawnX;
+        you.y = you.spawnY;
+    }
+};
+you.x = you.spawnX;
+you.y = you.spawnY;
+var on = false;
+var lock = true;
+var mouseClick  = false;
+var openApp = "safari";
+var Scr = 0;
+var NOScr = false;
+var isTwoDigits = function(num) {
+	return floor(abs(num)).toString().length === 2;
+};
+var mouseIn = function(x,y,w,h){
+    if(mouseX > x && mouseY > y && mouseX < x+w && mouseY < y+h){
+        return true;
+    }else{
+        return false;
+    }
+};
+var homePressed = function(){
+    if(mouseIn(185,365,30,30) && mouseIsPressed){
+        return true;
+    }else{
+        return false;
+    }
+};
+var desktime = 0;
+var slider = function() {
+    image(getImage("landscapes/beach-sunset"),0,0,404,404);
+    noStroke();
+    fill(184, 184, 184,100);
+    rect(100,300,200,30,10);
+    fill(255, 255, 255);
+    fill(153, 153, 153);
+    if(mouseIn(120,300,160,30)&& mouseIsPressed){
+        rect(mouseX-20,300,40,30,10);
+        fill(255, 255, 255);
+        rect(mouseX-15,310,20,10);
+        triangle(mouseX+5,305,mouseX+15,315,mouseX+5,325);
+        if(mouseX > 260){
+            lock = false;
+            NOScr = true;
+            openApp = "home";
+        }
+    }else{
+        fill(255, 255, 255);
+        rect(100,300,40,30,10);
+        fill(173, 173, 173);
+        rect(105,310,20,10);
+        triangle(125,305,135,315,125,325);
+        fill(255, 255, 255);
+        textSize(18);
+        text("Slide to unlock",155,326);
+    }
+    var m = minute();
+    var h = hour();
+    var per = (h < 12) ? "AM" : (h === 12 || h > 12) ? "PM" : "";
+    m = m < 10 ? "0" + m : m;
+    h = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    fill(255, 255, 255);
+    textFont(createFont("Tahoma", 20), 20);
+    textSize(100);
+    text(h + ":" + m, 105, 123);
+    textSize(30);
+    text(mm + "/" + dd + "/" + yy, 135, 143);
+    textSize(10);
+    desktime = 0;
+};
+var apps = [
+    {
+        color:[255,0,0],
+        name:"RedBall"
+    },
+    {
+        color:[0,255,255],
+        name:"Minecraft"
+    },
+    {
+        color:[0,255,10],
+        name:"AndroidClicker"
+    },
+    {
+        color:[166,0,255],
+        name:"PainterPro"
+    },
+    {
+        color:[0],
+        name:"XYGraph"
+    },
+    {
+        color:[180,180,180],
+        name:"TrigGraph"
+    },
+    {
+        color:[255,213,0],
+        name:"SpacePath"
+    },
+    {
+        color:[255,255,255],
+        name:"Timer"
+    }
+    ];
+var bckScr = -10;
+var gradient = function(x, y, value, min, max) {
+this.x = x;
+this.y = y;
+this.value = value;
+this.min = min;
+this.max = max;
+};
+gradient.prototype.draw = function() {
+    noFill();
+    strokeWeight(2);
+    // creates the colorful line on which the bars are drawn
+    for(var i = 0; i < 50; i ++) {
+        stroke(i*5, i*5, i*5);
+        line(this.x+i, this.y, this.x+i, this.y);
+        
+    }
+    
+    //the plus and minus symbols
+    stroke(0, 0, 0);
+    line(this.x, this.y-10, this.x+8, this.y-10);
+    stroke(255, 255, 255);
+        
+        line(this.x+46, this.y-10, this.x+54, this.y-10);
+    line(this.x+99/2, this.y-14, this.x+99/2, this.y-6);
+    noStroke();
+    this.xGradient =((this.value-this.min)/(this.max-this.min))*100;
+    // colors the bar
+        fill((this.xGradient+2)*2.5, (this.xGradient+2)*2.5, (this.xGradient+2)*2.5);
+        rect(this.xGradient/2+this.x-2, this.y-8, 5, 16, 3);
+        // allows the user to change bar position and feature value
+    if(mouseIsPressed && mouseX > this.x && mouseX < this.x+50 && mouseY > this.y-9 && mouseY < this.y+9) {
+        this.value = ((mouseX-this.x)/50)*(this.max-this.min)+this.min; 
+
+    }
+    
+};
+var colorOn = false;
+var colorX = 0;
+var rGrad = new gradient(20, 50, 100, 0, 255);
+var gGrad = new gradient(20, 90, 0, 0, 255);
+var bGrad = new gradient(20, 130, 200, 0, 255);
+var sGrad = new gradient(20, 200, 10, 2, 20);
+var char = function(x,y,size,k,f, mode){
+    this.x=x;
+    this.y=y;
+    this.size = size;
+    this.k=k;
+    this.f=f;
+    this.speed = 3;
+    this.count = 4;
+    this.mode = mode;
+};
+char.prototype.draw = function(x, y) {
+    this.size = sGrad.value;
+    noStroke();
+    for(var i = 0; i < this.count; i ++) {
+    fill(rGrad.value+150*cos(frameCount*8-i*90), gGrad.value+150*cos(frameCount*8-i*90), bGrad.value+150*cos(frameCount*8-i*90));
+    if(this.mode === "e") {
+    ellipse(this.x+this.size*cos(frameCount*8-i*90),this.y+this.size*sin(frameCount*8-i*90),this.size,this.size);
+    }
+    if(this.mode === "t") {
+    triangle(this.x+this.size*cos(frameCount*8-i*90),this.y+this.size*sin(frameCount*8-i*90),this.x+this.size*cos(frameCount*8-i*90)-this.size,this.y+this.size*sin(frameCount*8-i*90)-this.size,this.x+this.size*cos(frameCount*8-i*90)+this.size,this.y+this.size*sin(frameCount*8-i*90)-this.size);
+    }
+    if(this.mode === "r") {
+    rect(this.x+this.size*cos(frameCount*8-i*90)-this.size/2,this.y+this.size*sin(frameCount*8-i*90)-this.size/1,this.size,this.size);
+    }
+    }
+
+};
+char.prototype.move = function(){
+    if(keys[this.k[0]]&&this.y>this.size*2){
+        this.y-=this.speed;
+    }
+    if(keys[this.k[1]]&&this.y<height-this.size*2){
+        this.y+=this.speed;
+    }
+    if(keys[this.k[2]]&&this.x>100+this.size*2){
+        this.x-=this.speed;
+    }
+    if(keys[this.k[3]]&&this.x<width-this.size*2){
+        this.x+=this.speed;
+    }
+};
+var p1 = new char((width+100)/2,height/2,10,[UP,DOWN,LEFT,RIGHT],[0,0,255], "t");
+var draw = function() {
+    try{
+    textAlign(LEFT,BOTTOM);
+    if(homePressed()){
+        if(on === false){
+            on = true;
+        }
+    }
+    if(on === true){
+        if(lock === true){
+            slider();
+        }else{
+            switch(openApp){
+                case "home":
+                image(getImage("landscapes/beach-sunset"),0,0,404,404);
+                noStroke();
+                textSize(30);
+                fill(64, 64, 64);
+                ellipse(181,298,20,20);
+                fill(255, 255, 255);
+                ellipse(210,298,20,20);
+                fill(163, 163, 163);
+                rect(0,0,400,20);
+                if(Scr >= 0){
+                    fill(150, 150, 150,100);
+                    quad(100,330,300,330,320,360,80,360);
+                }
+                if(Scr === 0){
+                    for(var i = 0; i<apps.length;i++){
+                    fill(apps[i].color[0], apps[i].color[1], apps[i].color[2]);
+            
+                if(i < 4){
+                    rect(75+(i*64),40,32,32,5);
+                    fill(0, 0, 0);
+                    textAlign(CENTER,BOTTOM);
+                    textSize(11);
+                    text(apps[i].name,69+(i*64),67,45,39);
+                    if(mouseIn(75+(i*64),40,32,32,5) && mouseIsPressed){
+                        openApp = apps[i].name;
+                    }
+                }else{
+                if(i >= 4 && i < 8){
+                    rect(75+(i-4)*64,100,32,32,5);
+                    fill(0, 0, 0);
+                    textSize(11);
+                    text(apps[i].name,69+(i-4)*64,127,45,39);
+                    if(mouseIn(75+(i-4)*64,100,32,32,5) && mouseIsPressed){
+                    openApp = apps[i].name;
+                }
+                }else{
+                    rect(75+(i-8)*64,160,32,32,5);
+                    fill(0, 0, 0);
+                    textSize(11);
+                    text(apps[i].name,69+(i-8)*64,187,45,39);
+                }
+            }
+        }
+        bckScr = -10;
+    }
+    if(Scr === 1){
+        image(getImage("landscapes/beach-sunset"),0,0,404,404);
+        noStroke();
+        fill(163, 163, 163);
+        rect(0,0,400,20);
+        fill(0, 0, 0);
+        textSize(20);
+        text("Have more ideas for apps? Please\ntell me now by sending a game\nthat can be made into a app.\n\nThank you!\nAlso, read the rules in the code when\nmaking a app.",9,203);
+        fill(255, 255, 255);
+        ellipse(181,298,20,20);
+        fill(64,64,64);
+        ellipse(210,298,20,20);
+        fill(150, 150, 150,100);
+        quad(100,330,300,330,320,360,80,360);
+        bckScr = -20;
+    }
+    if(mouseIsPressed){
+    if(mouseX-20 > pmouseX && NOScr === false && Scr > -1){
+        Scr--;
+        NOScr = true;
+    }
+    if(mouseX+20 < pmouseX && NOScr === false && Scr < 1){
+        Scr++;
+        NOScr = true;
+    }
+    }else{
+        NOScr = false;
+    }
+    if(homePressed()){
+        Scr = 0;
+    }
+                    break;
+                case "RedBall":
+                    resetMatrix();
+                    frameRate(17);
+                    rectMode(UP);
+                    background(176, 176, 176);
+                    you.update();
+                    nextlevel();
+                    displaylavas();
+                    displayend();
+                    displaycubes();
+                    you.display();
+                    fill(0, 0, 0);
+                    rect(0,0,width/(400/you.fr),10);
+                    textAlign(CENTER, CENTER);
+                    resetMatrix();
+                    break;
+                case "Minecraft":
+                    game();
+                    if(keyCode === 83 | keyCode === 83){
+                            curBlock = curBlock+1;
+                            learn = true;
+                    }
+                    if(curBlock===10){
+                        if(macMode === true){
+                            curBlock = 0;
+                        }else{
+                            curBlock = 1;
+                        }
+                    }
+                    break;
+                    case "AndroidClicker":
+                        background(255, 255, 255);
+   fill(0, 0, 0);
+   text("Android Devices Made: "+a, 125, 10);
+   
+   //text("Android Devices Sold: "+b, 125, 30);
+   
+   text("Number of Workers Hired: "+ numW, 84, 348);
+   text("Number of Machines Hired: "+ numM, 84, 362);
+   text("Number of Stores Bought: "+ numS, 84, 376);
+   text("Number of Factorys Bought: "+ numF, 84, 389);
+   fill(230, 225, 225);
+rect(0, 0, 50, 50);
+rect(0, 50, 50, 50);
+rect(0, 100, 50, 50);
+rect(0, 150, 50, 50);
+rect(0, 200, 50, 50);
+rect(0, 250, 50, 50);
+rect(0, 300, 50, 50);
+rect(0, 350, 50, 49);
+fill(0, 0, 0);
+text("Buy A\nFactory\n$1000", 7, 13);
+text("Hire A\nWorker\n$25",7,167);
+text("Buy A\nStore\n$500",7,65);
+text("Buy A \nMachine\n$100", 4, 115);
+android(126, 116);
+
+   
+
+if(numW>=10){
+    numW = 10;
+    fill(255, 0, 0);
+    text("Max", 53, 177);
+}
+if(numM>=10){
+    numM = 10;
+    fill(255, 0, 0);
+    text("Max", 53, 126);
+}
+if(numS>=10){
+    numS = 10;
+    fill(255, 0, 0);
+    text("Max", 53, 79);
+}
+if(numF>=10){
+    numF = 10;
+    fill(255, 0, 0);
+    text("Max", 53, 28);
+}
+switch(numW){
+    case 1:
+        a+=Ws;
+        break;
+    case 2:
+        a+=(Ws*2);
+        break;
+    case 3:
+        a+=(Ws*3);
+        break;
+    case 4:
+        a+=(Ws*4);
+        break;
+    case 5:
+        a+=(Ws*5);
+        break;
+    case 6:
+        a+=(Ws*6);
+        break;
+    case 7:
+        a+=(Ws*7);
+        break;
+    case 8:
+        a+=(Ws*8);
+        break;
+    case 9:
+        a+=(Ws*9);
+        break;
+    case 10:
+        a+=(Ws*10);
+        break;
+}
+switch(numM){
+    case 1:
+        a+=Ms;
+        break;
+    case 2:
+        a+=(Ms*2);
+        break;
+    case 3:
+        a+=(Ms*3);
+        break;
+    case 4:
+        a+=(Ms*4);
+        break;
+    case 5:
+        a+=(Ms*5);
+        break;
+    case 6:
+        a+=(Ms*6);
+        break;
+    case 7:
+        a+=(Ms*7);
+        break;
+    case 8:
+        a+=(Ms*8);
+        break;
+    case 9:
+        a+=(Ms*9);
+        break;
+    case 10:
+        a+=(Ms*10);
+        break;
+}
+switch(numS){
+    case 1:
+        a+=Ss;
+        break;
+    case 2:
+        a+=(Ss*2);
+        break;
+    case 3:
+        a+=(Ss*3);
+        break;
+    case 4:
+        a+=(Ss*4);
+        break;
+    case 5:
+        a+=(Ss*5);
+        break;
+    case 6:
+        a+=(Ss*6);
+        break;
+    case 7:
+        a+=(Ss*7);
+        break;
+    case 8:
+        a+=(Ss*8);
+        break;
+    case 9:
+        a+=(Ss*9);
+        break;
+    case 10:
+        a+=(Ss*10);
+        break;
+}
+switch(numF){
+    case 1:
+        a+=Fs;
+        break;
+    case 2:
+        a+=(Fs*2);
+        break;
+    case 3:
+        a+=(Fs*3);
+        break;
+    case 4:
+        a+=(Fs*4);
+        break;
+    case 5:
+        a+=(Fs*5);
+        break;
+    case 6:
+        a+=(Fs*6);
+        break;
+    case 7:
+        a+=(Fs*7);
+        break;
+    case 8:
+        a+=(Fs*8);
+        break;
+    case 9:
+        a+=(Fs*9);
+        break;
+    case 10:
+        a+=(Fs*10);
+        break;
+}
+                    break;
+
+                case "PainterPro":
+                        stroke(255, 0, 0);
+    if(colorOn) {
+    rGrad.value = 125+125*cos(frameCount);
+    gGrad.value = 125+125*cos(frameCount+120);
+    bGrad.value = 125+125*cos(frameCount+240);
+    }
+    noStroke();
+    fill(100);
+    rect(0, 0, 100, height);
+    fill(255, 0, 0);
+    rect(14, 32, 64, 29, 4);
+    fill(0, 255, 0);
+    rect(14, 72, 64, 29, 4);
+    fill(0, 0, 255);
+    rect(14, 112, 64, 29, 4);
+    fill(rGrad.value, gGrad.value, bGrad.value);
+    rect(14, 182, 64, 29, 4);
+    rGrad.draw();
+    gGrad.draw();
+    bGrad.draw();
+    sGrad.draw();
+    fill(rGrad.value, gGrad.value, bGrad.value);
+     ellipse(20, 177, 2, 2);
+     ellipse(30, 177, 4, 4);
+     ellipse(45, 176, 8, 8);
+     ellipse(65, 173, 14, 14);
+    
+    p1.draw();
+    p1.move();
+    fill(255, 0, 0);
+    if(mouseX>10&&mouseX<90&&mouseY>height-50&&mouseY<height-20) {
+     fill(255);
+    }
+    rect(10, height-50, 80, 30, 4);
+    fill(255);
+    if(mouseX>10&&mouseX<90&&mouseY>height-50&&mouseY<height-20) {
+     fill(255, 0, 0);
+     if(mouseIsPressed) {
+      fill(255);
+      rect(100, 0, width, height);
+     }
+    }
+    textSize(23);
+    textAlign(CENTER,CENTER);
+    text("CLEAR", 50, height-35);
+                    break;
+                case "XYGraph":
+                    background(250, 250, 250);
+    fill(255, 0, 0);
+    strokeWeight(3);
+    stroke(0, 0, 0);
+    var ellipseSize;
+    ellipseSize = 10;
+    line(mouseX,0,mouseX,400);
+    line(0,mouseY,400,mouseY);
+    ellipse(1,mouseY,ellipseSize,ellipseSize);
+    ellipse(mouseX,1,ellipseSize,ellipseSize);
+    ellipse(mouseX,mouseY,ellipseSize,ellipseSize);
+    for (var i = 0; i < 800; i+=10) {
+        stroke(84, 84, 84);
+        strokeWeight(1);
+        line(i, 400, i, 0);
+        line(0, i, 400, i);
+    }
+    textSize(20);
+    //Y
+    if(mouseX<75|mouseY<30){
+        if(mouseX<75&&mouseY<60){
+            text("y = ",mouseX+5,mouseY+44);
+            text(mouseY,mouseX+33+5,mouseY+44);
+        }else{
+            if(mouseY<30){
+                text("y = ",11,mouseY+20);
+                text(mouseY,11+33,mouseY+20);
+            }else{
+                text("y = ",mouseX+5,mouseY-6);
+                text(mouseY,mouseX+33+5,mouseY-6);
+            } 
+        }
+    }else{
+        text("y = ",11,mouseY-6);
+        text(mouseY,11+33,mouseY-6);
+    }
+    //X
+    if(mouseX>325|mouseY<30){
+        if(mouseY<30&&mouseX>325){
+            text("x = ",mouseX-70,mouseY+20);
+            text(mouseX,mouseX-40,mouseY+20);
+        }else{
+            if(mouseX>325){
+                text("x = ",mouseX-70,23);
+                text(mouseX,mouseX-40,23);
+            }else{
+            text("x = ",mouseX+5,mouseY+20);
+            text(mouseX,mouseX+33+5,mouseY+20);
+            } 
+        }
+    }else{
+        text("x = ",mouseX+5,23);
+        text(mouseX,mouseX+33+5,23);
+    }
+                break;
+                case "TrigGraph":
+                    fill(255, 255, 255, 12);
+    rect(0,0,400,400);
+        
+    stroke(148, 148, 148);
+    line(0, 200, 400, 200);
+    line(200, 0, 200, 400);
+    
+    strokeWeight(2);
+    for (var i =0; i<5; i++) {
+        stroke(0, 173, 23);
+        var y = scal * tan(angle * angS);
+        if (abs(y-y0)<250) {
+            line(angle + 199.5, y0 + 200,
+                    angle + 200, y + 200);
+        }
+        y0 = y;
+        
+        stroke(255, 0, 0);
+        y = scal * cos(angle * angS);
+        line(angle + 199.5, y1 + 200, angle + 200, y + 200);
+        y1 = y;
+        
+        stroke(0, 51, 255);
+        y = scal * sin(angle * angS);
+        line(angle + 199.5, y2 + 200, angle + 200, y + 200);
+        y2 = y;
+    
+        angle += 0.5;
+        if (angle > 200) {
+            angle = -200;
+        }
+    }
+                break;
+                case "SpacePath":
+                    // time = 0; // debug mode 
+    var oldCentre;
+    
+    if (cool) {
+        oldCentre = centre;
+        centre = { x: 200 - (distances.EarthSun * cos(orbital_velocities.Earth * time) + distances.MoonEarth * cos(orbital_velocities.Moon * time)), y: 200 - (distances.EarthSun * sin(orbital_velocities.Earth * time) + distances.MoonEarth * sin(orbital_velocities.Moon * time)) };
+    }
+    
+	noFill();
+	strokeWeight(0.5);
+	background(0, 0, 0);
+	stroke(212, 148, 148);
+
+	var positions = {
+		Sun: centre,
+		Earth: { x: centre.x + distances.EarthSun * cos(orbital_velocities.Earth * time), y: centre.y + distances.EarthSun * sin(orbital_velocities.Earth * time) } };
+	
+    if (boundaries) {
+        orbit(positions.Sun, distances.EarthSun + distances.MoonEarth, 0.125);
+        orbit(positions.Sun, distances.EarthSun - distances.MoonEarth, 0.125);
+    }
+
+    if (paths) {
+	    stroke(86, 152, 209);
+	    orbit(positions.Sun, distances.EarthSun, 1);
+	    stroke(233, 237, 245);
+	    orbit(positions.Earth, distances.MoonEarth, 0.5);
+    }
+
+	strokeWeight(44);
+	fill(255, 255, 0);
+	stroke(255, 255, 0);
+	//point(positions.Sun.x, positions.Sun.y);
+    image(images.Sun, positions.Sun.x-33, positions.Sun.y-68, 67, 114);
+	text("Sun", positions.Sun.x - 10, positions.Sun.y + 44);
+
+	strokeWeight(10);
+	fill(0, 123, 255);
+	stroke(0, 123, 255);
+	point(positions.Earth.x, positions.Earth.y);
+    image(images.Earth, positions.Earth.x-5, positions.Earth.y-5,12,12);
+	text("Earth", positions.Earth.x - 14, positions.Earth.y + 16);
+    
+    stroke(255, 255, 255);
+    if (trail) {
+	    time -= (1 - 1/slow) * delta_t; // rewind time
+	    delta_t = plot(steps, precision, 2);
+    } else {
+        time += (steps * precision) / (2.5 * slow);
+		strokeWeight(4);
+		point(centre.x + distances.EarthSun * cos(orbital_velocities.Earth * time) + distances.MoonEarth * cos(orbital_velocities.Moon * time), centre.y + distances.EarthSun * sin(orbital_velocities.Earth * time) + distances.MoonEarth * sin(orbital_velocities.Moon * time));
+    }
+
+	positions.Earth = { x: centre.x + distances.EarthSun * cos(orbital_velocities.Earth * time), y: centre.y + distances.EarthSun * sin(orbital_velocities.Earth * time) };
+    
+	positions.Moon = { x: positions.Earth.x + distances.MoonEarth * cos(orbital_velocities.Moon * time), y: positions.Earth.y + distances.MoonEarth * sin(orbital_velocities.Moon * time) };
+
+	fill(255, 255, 255);
+	stroke(168, 168, 168);
+    strokeWeight(7);
+    point(positions.Moon.x, positions.Moon.y);
+	text("Moon", positions.Moon.x - 15, positions.Moon.y + 14);
+    
+    if (cool) {
+        centre = oldCentre;
+    }
+    strokeWeight(1);
+                break;
+                case "Timer":
+                    var t1 = millis();
+    background(255, 255, 255);
+    fill(0, 0, 0);
+    // See if we have wrapped around to the next second.
+    if (!pause && (t1 - t0) >= 1000) {
+        // If we have, then increment our seconds counter
+        // and reset our millisecond counter.
+        time++;
+        t0 = t1;
+    }
+    var min = floor(time/60);
+    var sec = (time % 60);
+    if (sec < 10) {
+        sec = "0" + sec;
+    }
+    textSize(170);
+    text(min + ":" + sec, 0, 171);
+    textSize(50);
+    text("<p> to pause", 28, 240);
+                    break;
+            }
+        }
+        if(homePressed()){
+            openApp = "home";
+        }
+    }else{
+        background(33, 33, 33);
+    }
+    fill(0, 0, 0);
+    rect(0,364,404,76);
+    if(homePressed()){
+        stroke(0, 0, 0);
+    }
+    stroke(0);
+    fill(0, 0, 0);
+    ellipse(200,380,30,30);
+    fill(255, 255, 255,50);
+    bezier(185,380,185,372,192,365,200,365);
+    fill(26, 26, 26,0);
+    stroke(255, 255, 255);
+    rect(195,375,9,9,3);
+    noStroke();
+    fill(255, 255, 255,100);
+    noStroke();
+    }catch(e){
+        background(255, 0, 0);
+        
+    }
+};
+var mousePressed = function(){
+    if(mouseIn(360,0,30,10)){
+    if(on === true){
+        on = false;
+        lock = true;
+    }else{
+        on = true;
+    }
+    }
+};
