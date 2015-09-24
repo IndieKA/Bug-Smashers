@@ -1,0 +1,144 @@
+this.canvasExternals(save,3);
+/*a:hover { 
+    background-color: white;
+transition:3s;
+            -webkit-transform: perspective(800px)rotate3d(5, 5, 5, 360deg); 
+            -moz-transform: perspective(800px)rotate3d(5, 5, 5, 360deg);
+            -ms-transform: perspective(800px)rotate3d(5, 5, 5, 360deg);
+            -o-transform: perspective(800px)rotate3d(5, 5, 5, 360deg);
+            transform: perspective(800px)rotate3d(5, 5, 5, 360deg);
+            }
+        li {
+            background:rgb(214, 214, 214);
+            border:groove;
+            font-family:Segoe UI Light;
+}*/
+var flappyY = -15;
+var flappyX = -18;
+var flappyYtrans = 195 + 15;
+var flappyXtrans = 117 + 15;
+var flappySpeed = 7;
+var angle = 0;
+var flappyBird = function(flappyX, flappyY, pixel) {
+    pushMatrix();
+    translate(flappyXtrans, flappyYtrans);
+    rotate(angle);
+    fill(23, 23, 23);
+    noStroke();
+    rect(flappyX, flappyY, pixel, pixel);
+    rect(flappyX, flappyY + pixel, pixel, pixel);
+    rect(flappyX, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel, flappyY + pixel * 3, pixel, pixel);
+    rect(flappyX + pixel * 2, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 2, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 3, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 4, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 5, flappyY + pixel * 3, pixel, pixel);
+    rect(flappyX + pixel * 6, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 6, flappyY + pixel, pixel, pixel);
+    rect(flappyX + pixel * 5, flappyY, pixel, pixel);
+    rect(flappyX + pixel * 4, flappyY - pixel, pixel, pixel);
+    rect(flappyX + pixel * 3, flappyY - pixel, pixel, pixel);
+    rect(flappyX + pixel * 2, flappyY - pixel, pixel, pixel);
+    rect(flappyX + pixel, flappyY - pixel, pixel, pixel);
+    rect(flappyX + pixel * 2, flappyY + pixel * 5, pixel, pixel);
+    rect(flappyX + pixel * 3, flappyY + pixel * 6, pixel, pixel);
+    rect(flappyX + pixel * 4, flappyY + pixel * 6, pixel, pixel);
+    rect(flappyX + pixel * 5, flappyY + pixel * 7, pixel, pixel);
+    rect(flappyX + pixel * 6, flappyY + pixel * 7, pixel, pixel);
+    rect(flappyX + pixel * 7, flappyY + pixel * 7, pixel, pixel);
+    rect(flappyX + pixel * 8, flappyY + pixel * 7, pixel, pixel);
+    rect(flappyX + pixel * 9, flappyY + pixel * 7, pixel, pixel);
+    rect(flappyX + pixel * 10, flappyY + pixel * 6, pixel, pixel);
+    rect(flappyX + pixel * 11, flappyY + pixel * 6, pixel, pixel);
+    rect(flappyX + pixel * 12, flappyY + pixel * 6, pixel, pixel);
+    rect(flappyX + pixel * 13, flappyY + pixel * 6, pixel, pixel);
+    rect(flappyX + pixel * 14, flappyY + pixel * 6, pixel, pixel);
+    rect(flappyX + pixel * 15, flappyY + pixel * 5, pixel, pixel);
+    rect(flappyX + pixel * 15, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 14, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 13, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 12, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 11, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 10, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 9, flappyY + pixel * 5, pixel, pixel);
+    rect(flappyX + pixel * 8, flappyY + pixel * 4, pixel, pixel);
+    rect(flappyX + pixel * 9, flappyY + pixel * 3, pixel, pixel);
+    rect(flappyX + pixel * 9, flappyY + pixel, pixel, pixel);
+    rect(flappyX + pixel * 8, flappyY, pixel, pixel);
+    rect(flappyX + pixel * 8, flappyY - pixel, pixel, pixel);
+    rect(flappyX + pixel * 8, flappyY - pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 9, flappyY - pixel * 3, pixel, pixel);
+    rect(flappyX + pixel * 10, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 11, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 12, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 13, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 14, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 15, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 16, flappyY + pixel * 3, pixel, pixel);
+    rect(flappyX + pixel * 14, flappyY - pixel, pixel, pixel * 3);
+    rect(flappyX + pixel * 12, flappyY - pixel, pixel, pixel * 2);
+    rect(flappyX + pixel * 13, flappyY - pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 12, flappyY - pixel * 3, pixel, pixel);
+    rect(flappyX + pixel * 6, flappyY - pixel * 4, pixel * 6, pixel);
+    rect(flappyX + pixel * 4, flappyY - pixel * 3, pixel * 2, pixel);
+    rect(flappyX + pixel * 3, flappyY - pixel * 2, pixel, pixel);
+    fill(245, 255, 0);
+    rect(flappyX + pixel * 2, flappyY + pixel * 3, pixel * 3, pixel);
+    rect(flappyX + pixel, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 5, flappyY + pixel * 2, pixel, pixel);
+    rect(flappyX + pixel * 6, flappyY + pixel * 3, pixel * 3, pixel);
+    rect(flappyX + pixel * 7, flappyY + pixel * 2, pixel * 3, pixel);
+    rect(flappyX + pixel * 7, flappyY + pixel, pixel * 2, pixel);
+    rect(flappyX + pixel * 6, flappyY, pixel * 2, pixel);
+    rect(flappyX + pixel * 5, flappyY - pixel, pixel * 3, pixel);
+    rect(flappyX + pixel * 6, flappyY - pixel * 2, pixel * 2, pixel);
+    fill(210, 250, 238);
+    rect(flappyX + pixel * 4, flappyY - pixel * 2, pixel * 2, pixel);
+    rect(flappyX + pixel * 6, flappyY - pixel * 3, pixel * 3, pixel);
+    rect(flappyX + pixel, flappyY, pixel * 4, pixel);
+    rect(flappyX + pixel, flappyY + pixel, pixel * 5, pixel);
+    rect(flappyX + pixel * 2, flappyY + pixel * 2, pixel * 3, pixel);
+    fill(214, 43, 43);
+    rect(flappyX + pixel * 10, flappyY + pixel * 3, pixel * 6, pixel);
+    rect(flappyX + pixel * 10, flappyY + pixel * 5, pixel * 5, pixel);
+    rect(flappyX + pixel * 9, flappyY + pixel * 4, pixel, pixel);
+    fill(244, 202, 22);
+    rect(flappyX + pixel * 5, flappyY + pixel * 4, pixel * 3, pixel);
+    rect(flappyX + pixel * 3, flappyY + pixel * 5, pixel * 6, pixel);
+    rect(flappyX + pixel * 5, flappyY + pixel * 6, pixel * 5, pixel);
+    fill(233, 242, 242);
+    rect(flappyX + pixel * 10, flappyY + pixel, pixel, pixel);
+    rect(flappyX + pixel * 9, flappyY - pixel, pixel, pixel * 2);
+    fill(255, 255, 255);
+    rect(flappyX + pixel * 10, flappyY - pixel * 3, pixel * 2, pixel * 4);
+    rect(flappyX + pixel * 9, flappyY - pixel * 2, pixel * 4, pixel);
+    rect(flappyX + pixel * 11, flappyY + pixel, pixel * 3, pixel);
+    rect(flappyX + pixel * 13, flappyY - pixel, pixel, pixel * 2);
+    resetMatrix();
+
+};
+var draw = function() {
+    resetMatrix();
+    background(255, 255, 255);
+    textAlign(CENTER,CENTER);
+    fill(0);
+    textSize(70);
+    text("Tap to flap!",201,50);
+    flappyBird(flappyX, flappyY, 2);
+    if (flappyYtrans <= 344) {
+        flappySpeed += 1.5;
+    }
+    if (mouseIsPressed) {
+        flappySpeed = -8;
+    }
+    flappyYtrans += flappySpeed;
+    if (flappyYtrans >= 344) {
+        flappySpeed = 0;
+    }
+    angle = flappySpeed * 3;
+
+    if (flappySpeed === 0) {
+        angle = 90;
+    }
+};
