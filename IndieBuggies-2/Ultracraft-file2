@@ -1,0 +1,1502 @@
+/*********************************************************************************************
+ _|    _|  _|    _|                                                            _|_|    _|      
+ _|    _|  _|  _|_|_|_|  _|  _|_|    _|_|_|    _|_|_|  _|  _|_|    _|_|_|    _|      _|_|_|_|  
+ _|    _|  _|    _|      _|_|      _|    _|  _|        _|_|      _|    _|  _|_|_|_|    _|      
+ _|    _|  _|    _|      _|        _|    _|  _|        _|        _|    _|    _|        _|      
+   _|_|    _|      _|_|  _|          _|_|_|    _|_|_|  _|          _|_|_|    _|          _|_| 
+ _  __         ___ ___ _     _     _    _____   _ _ _   _         
+| | | |___ ___|  _|  _|_|___|_|___| |  |   __|_| |_| |_|_|___ ___ 
+| |_| |   | . |  _|  _| |  _| | .'| |  |   __| . | |  _| | . |   |
+|_____|_|_|___|_| |_| |_|___|_|__,|_|  |_____|___|_|_| |_|___|_|_|
+------------------------------------------------------------------------------------
+ * Made by @RaghavCS (now @Functionized) on February 13,2015. Do not copy or use in other games. All rights reserved.
+ * As previously stated, the original program's code still belongs to @RaghavCS
+ * Edited by @WhatifyNW on April 4, 2015 -- (to shorten to a manageable size and to have fun adding stuff)
+ * 
+ * Special thanks to Samuel (@rusty39) and Brains (@MesaJarJarBinks) for submitting their levels
+ * (Press level buttons 'g' and 'h' to see their submitted levels)
+ * 
+ * Accomplished so far:
+ * -DONE: Simplified key controls using switch() statement
+ * -DONE: Simplified Temperature controls (mathematically)
+ * -DONE: Added a "How to Play" section
+ * -DONE: Added experimental level save/load functions (press 's' in-game for load, 'r' for "save")
+ * -DONE: Added a level menu function
+ * -DONE: Added more lines than intended ;)
+ * -DONE: Added "large screen mode" (copy URL below into your browser)
+ * -DONE: Restore default font back to sans-serif
+ * -DONE: Made graphics smoother using 'smooth();'
+ * -DONE: Added a player and fixed collision controls :July 8th
+
+https://www.khanacademy.org/computer-programming/ultracraft-unofficial-edition/5237943572365312?width=800&height=800 
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ * -DONE: Fixed selection glitches due to cursor being 'out of bounds' of world
+ 
+ * TODO:Make more blocks
+ * TODO:Fix all bugs.
+ * TODO:Better features
+ * TODO:Add 'gadgets' (lever,pump,piston,hatch)
+ * TODO:Controlled movement and custom blocks in options
+ * 
+*********************************************************************************************/
+disableContextMenu();
+var LocaleValue='';
+var currentlocale='English';
+switch(currentlocale){
+    case 'English':LocaleValue="en";break;
+    case 'Español':LocaleValue="es";break;
+    case 'Français':LocaleValue="fr";break;
+    case 'Norsk bokmål':LocaleValue="nb";break;
+    case 'Português':LocaleValue="pt";break;
+    case 'Türkçe':LocaleValue="tr";break;
+}
+var locale={
+    en:{},
+    es:{
+    
+    },
+    fr:['Options'],
+    nb:['Options'],
+    pt:['Options'],
+    tr:['Options']
+};
+var langText=function(message,x,y,wid,hei){
+    //message=locale[message][currentlocale];
+    
+    if(!wid||!hei){text(message,x,y);}
+    else{text(message,x,y,wid,hei);}
+    
+};
+
+var f = createFont("sans-serif", 18);
+textFont(f);
+var keys = [];
+var trueIfAny = function(value, list, type) {
+    switch (type) {
+        case "match":
+            for (var i; i < list.length; i++) {
+                if (value === list[i]) {
+                    return true;
+                }
+            }
+    }
+};
+var json = (function(w) {return this[w];})("JSON");
+
+var mapScale = function(value, r1) {
+    var mapVal = function(value, r1, r2) {
+        return map(value, r1[0], r1[1], r2[0], r2[1]);
+    };
+    return mapVal(value, [r1[0], r1[1]], [0, min(height, width)]);
+};
+
+var worldSize = mapScale(25, [0, 400]); //You can change this (BEWARE OF TOO HIGH NUMBERS !)
+var defaultFireElement = 10; //Default element for fire
+var playerColor = color(255, 0, 0);
+
+var produceCopyOf = function(levelValues) {
+    var replacer = function(key, value) {
+        return (value === undefined) && (value = null || !0) ? null : value;
+    };
+    var replacer2 = function(key, value) {
+        return (value === null) && (value = undefined || !0) ? undefined : value;
+    };
+    return json.parse(json.stringify(levelValues, replacer), replacer2);
+};
+var generateBlankWorld = function() {
+    var output = [];
+    for (var i = 0; i < worldSize; i++) {
+        output[i] = [];
+        for (var j = 0; j < worldSize; j++) {
+            output[i][j] = [0];
+        }
+    }
+    return output;
+};
+var estim = function(origNum, x) {
+    var est2 = function(original) {
+        if (origNum.length > 0 && origNum.constructor === Array) {
+            var newArr = [];
+            for (var i = 0; i < original.length; i++) {
+                newArr = estim(original[i]);
+            }
+            return newArr;
+        } else {
+            return original;
+        }
+    };
+    var t = round(origNum * pow(10, x)) / pow(10, x);
+    if (t >= 0 || t < 0) {
+        return t;
+    } else {
+        return origNum;
+    }
+};
+var w = function(matrix) {
+    var obj = produceCopyOf(matrix);
+    var keys = Object.keys(obj);
+    var str = "";
+    for (var i = 0; i < keys.length; i++) {
+        str += "world[" + keys[i] + "]=[" + obj[keys[i]] + "];\n";
+    }
+    return str;
+};
+var arrow1 = function(StartX, StartY, width, height) {
+    beginShape();
+    vertex(StartX, StartY);
+    vertex(StartX + width, StartY + height / 2);
+    vertex(StartX, StartY + height);
+    endShape();
+};
+var getInOrder3 = function(matrix) {
+    var str = "[";
+    var xB = false;
+    var xA = [0, undefined, 0, undefined, undefined, undefined, undefined, undefined];
+    for (var dOne = 0; dOne < matrix.length; dOne++) {
+        str += "[";
+        for (var dTwo = 0; dTwo < matrix[dOne].length; dTwo++) {
+            if (matrix[dOne][dTwo][0] === 0) {
+                str += "x,";
+                xB = true;
+            } else {
+                str += "[";
+                for (var dThree = 0; dThree < 6; dThree++) {
+                    str += estim(matrix[dOne][dTwo][dThree], 2) + ",";
+                }
+                str = str.slice(0, str.length - 1) + "],";
+            }
+        }
+        str = str.slice(0, str.length - 1) + "],";
+    }
+    str = str.slice(0, str.length - 1) + "]";
+    str = "var levelname='blank';\nlevels[levelname]=" + str;
+    if (xB) {
+        str = "\nvar x = [0,undefined,0,undefined,undefined];\n" + str;
+    }
+    return "\nvar make[levelname] = function() { " + str;
+};
+var superCheck = function(boolArr, valueArr) {
+    for (var inc; inc < min(boolArr.length, valueArr); inc++) {
+        if (boolArr[inc]) {
+            return valueArr[inc];
+        }
+    }
+};
+/**Will stay as-is*******************/
+var Status = "Menu";
+var Button = function(x, y, w, h, o, s) {
+    x = mapScale(x, [0, 400]);
+    y = mapScale(y, [0, 400]);
+    w = mapScale(w, [0, 400]);
+    h = mapScale(h, [0, 400]);
+    resetMatrix();
+    translate(x, y);
+    if (dist(x, x, mouseX, mouseX) < w && dist(y, y, mouseY, mouseY) < h) {
+        if (mouseIsPressed) {
+            Status = o;
+        }
+        translate(random(-3, 3), random(-3, 3));
+    }
+    fill(255, 255, 255);
+    strokeWeight(5);
+    stroke(140, 140, 140);
+    rectMode(CENTER);
+    rect(0, 0, w, h);
+    fill(135, 135, 135);
+    textAlign(CENTER, CENTER);
+    langText(o, 0, 0);
+    resetMatrix();
+};
+var elements = [
+    [],
+    ["Wall", color(120), 20, 0, [],
+        [], -1, []
+    ], // 1
+    ["Sand", color(240, 230, 178), 20, 1, [],
+        [7, 1723], -1, []
+    ], // 2
+    ["Water", color(0, 64, 255), 20, 2, [6, 0],
+        [5, 100], -1, [
+            [13, 14, 100, true]
+        ]
+    ], // 3
+    ["Oxygen", color(147, 205, 250), 20, 3, [8, -182.96],
+        [10, 450], -1, [
+            [10, 10, 100, false, 800]
+        ]
+    ], // 4
+    ["Steam", color(159, 182, 252), 120, 3, [3, 100],
+        [], -1, []
+    ], // 5
+    ["Ice", color(199, 255, 255), -15, 0, [],
+        [3, 0], -1, []
+    ], // 6
+    ["Soil", color(79, 43, 31), 1800, 2, [39, 1723],
+        [], -1, []
+    ], // 7
+    ["Liquid Oxygen", color(95, 183, 250), -200, 2, [9, -218.79],
+        [4, -182.96], -1, [
+            [10, 10, 100, false, 800]
+        ]
+    ], // 8
+    ["Bedrock", color(34, 38, 41), -240, 0, [],
+        [8, -218.79], -1, [
+            [10, 10, 100, false, 800]
+        ]
+    ], // 9
+    ["Fire", color(250, 178, 53), 600, 4, [],
+        [], 50, []
+    ], // 10
+    ["Stone", color(100), 20, 1, [],
+        [12, 750], -1, []
+    ], // 11
+    ["Lava", color(255, 68, 0), 1000, 2, [11, 750],
+        [], -1, []
+    ], //12
+    ["Salt", color(250), 20, 1, [],
+        [], -1, [
+            [3, 14, 100, true]
+        ]
+    ], // 13
+    ["Magma", color(255, 179, 0), 100, 2, [6, 0],
+        [5, 102], -1, []
+    ], // 14
+    ["Iron", color(230), 20, 0, [],
+        [16, 1538], -1, [
+            [3, 17, 1, false],
+            [14, 17, 2, false]
+        ]
+    ], // 15
+    ["Molten Iron", color(255, 131, 43), 1700, 2, [15, 1538],
+        [], -1, []
+    ], // 16
+    ["Grass", color(34, 255, 0), 20, 1, [],
+        [], -1, []
+    ], // 17
+    ["Gold", color(255, 178, 23), 20, 0, [],
+        [19, 1064.18], -1, []
+    ], // 18
+    ["Molten Gold", color(255, 122, 5), 1200, 2, [18, 1064.18],
+        [], -1, []
+    ], // 19
+    ["Gunpowder", color(80), 20, 1, [],
+        [10, 400], -1, [
+            [10, 10, 100, false, 900]
+        ]
+    ], // 20
+    ["CO2", color(150), 20, 3, [22, -75],
+        [], -1, []
+    ], // 21
+    ["Liquid CO2", color(175), -75.5, 2, [23, -76],
+        [21, -75], -1, []
+    ], // 22
+    ["Dry Ice", color(220), -80, 0, [],
+        [22, -76], -1, []
+    ], // 23
+    ["Wood", color(92, 40, 17), 20, 0, [],
+        [], -1, [],
+        [50, 500, 0.1, 10]
+    ], // 24
+    ["Coal", color(20), 20, 0, [],
+        [], -1, [],
+        [300, 900, 0.15, 25]
+    ], // 25
+    ["Powder Coal", color(35), 20, 1, [],
+        [], -1, [],
+        [300, 900, 0.15, 25]
+    ], // 26
+    ["Hydrogen", color(131, 200, 252), 20, 3, [28, -252.88],
+        [10, 800], -1, [
+            [10, 10, 100, false, 1400]
+        ]
+    ], // 27
+    ["Liquid Hydrogen", color(121, 180, 222), -255, 2, [29, -259.16],
+        [27, -252.88], -1, [
+            [10, 10, 100, false, 1400]
+        ]
+    ], // 28
+    ["Solid Hydrogen", color(101, 150, 202), -270, 0, [],
+        [28, -259.16], -1, [
+            [10, 10, 100, false, 1400]
+        ]
+    ], // 29
+    ["Nitrogen", color(150, 230, 252), 20, 3, [31, -195.8],
+        [10, 750], -1, [
+            [10, 10, 100, false, 1250]
+        ]
+    ], // 30
+    ["Liquid Nitrogen", color(130, 210, 232), -200, 2, [32, -210],
+        [30, -195.8], -1, [
+            [10, 10, 100, false, 1250]
+        ]
+    ], // 31
+    ["Solid Nitrogen", color(110, 190, 212), -250, 0, [],
+        [31, -210], -1, [
+            [10, 10, 100, false, 1250]
+        ]
+    ], // 32
+    ["Copper", color(209, 86, 4), 20, 0, [],
+        [34, 1084.62], -1, []
+    ], // 33
+    ["Molten Copper", color(255, 161, 61), 1200, 2, [33, 1084.62],
+        [], -1, [
+            [36, 38, 25, true]
+        ]
+    ], // 34
+    ["Tin", color(190, 190, 170), 20, 0, [],
+        [36, 231.93], -1, []
+    ], // 35
+    ["Molten Tin", color(250, 150, 20), 400, 2, [35, 231.93],
+        [], -1, [
+            [34, 38, 25, true]
+        ]
+    ], // 36
+    ["Bronze", color(180, 90, 30), 20, 0, [],
+        [38, 950], -1, []
+    ], // 37
+    ["Molten Bronze", color(250, 160, 40), 1100, 2, [37, 950],
+        [], -1, []
+    ], // 38
+    ["BlueWall", color(0, 64, 255), 20, 0, [],
+        [], -1, []
+    ], // 39
+    //FIX THESE BELOW//
+    ["Heterogenous Gas", color(74, 74, 74, 30), 20, 3, [28, -252.88],
+        [10, 800], -1, [
+            [10, 10, 100, false, 1400]
+        ]
+    ],
+    ["Player", playerColor, 20, 1, [],
+        [], -1, [],
+        [300, 900, 0.15, 25]
+    ],
+];
+noStroke();
+var selectedElement = 1;
+var paused = false,
+    clicked = false;
+var elementsOpened = false,
+    elementsPage = 0;
+var blockSize = Math.floor(min(width, height) / worldSize);
+var elementsPages = Math.floor((elements.length - 2) / 9);
+var tool = 0,
+    toolNames = ["Element Maker", "Heater", "Cooler"];
+var toolColors = [color(0, 255, 0), color(255, 0, 0), color(0, 0, 255)];
+var world;
+var returnWithoutDraw = function(drawing, a, b, c, d) {
+    noLoop();
+    var temp = get(0, 0, width, height);
+    drawing();
+    var got = get(a, b, c, d);
+    image(temp, 0, 0, width, height);
+    loop();
+    return got;
+};
+var imgArr = [];
+mousePressed = function() {
+    keys.moused = true;
+};
+mouseReleased = function() {
+    keys.moused = false;
+};
+var menu = function(open, elements, doFunct, imageFunct) {
+    if (open) {
+        var elementsPages = Math.floor((Object.keys(elements)
+            .length - 2) / 9);
+        this.elementsPage = constrain(this.elementsPage, 0, elements.length) || 0;
+        fill(150);
+        stroke(50, 50, 50, 100);
+        rect(50, 125, 300, 150);
+        rect(0, 175, 50, 50);
+        rect(350, 175, 50, 50);
+        rect(150, 100, 100, 25);
+        fill(255);
+        textAlign(LEFT);
+        langText("Page: " + (this.elementsPage + 1) + " / " + (this.elementsPages + 1), 160, 117);
+        fill(120);
+        noStroke();
+        arrow1(40, 185, -30, 215 - 185);
+        arrow1(360, 185, 30, 215 - 185);
+        fill(255, 255, 255, 100);
+        if (mouseX >= 0 && mouseX <= 50 && mouseY >= 175 && mouseY <= 225) {
+            rect(0, 175, 50, 50);
+            if (mouseIsPressed && this.elementsPage > 0 && !clicked) {
+                elementsPage--;
+                clicked = true;
+            }
+        } else if (mouseX >= 350 && mouseX <= 400 && mouseY >= 175 && mouseY <= 225) {
+            rect(350, 175, 50, 50);
+            if (mouseIsPressed && this.elementsPage < elementsPages && !clicked) {
+                elementsPage++;
+                clicked = true;
+            }
+        }
+        var elementId = this.elementsPage * 9 + 1;
+        var keyss = Object.keys(elements);
+        var aText = function(i, j) {
+            textAlign(CENTER, CENTER);
+            langText((typeof elements[keyss[elementId]][0] === 'string') ? elements[keyss[elementId]][0] :(typeof keyss[elementId] === 'string') ? keyss[elementId] : keyss[elementId][1] || "", j * 100 + 50, i * 50 + 125, 100, 50);
+        };
+        for (var i = 0; i < 3; i++) {
+            for (var j = 0; j < 3; j++) {
+                if (elementId < keyss.length) {
+                    stroke(0);
+                    strokeWeight(1);
+                    fill(typeof elements[keyss[elementId]][1] === 'number' ? elements[keyss[elementId]][1] : color(255, 0, 0));
+                    rect(j * 100 + 50, i * 50 + 125, 100, 50);
+                    if (typeof imageFunct === 'function') {
+                        imgArr[elementId] = imgArr[elementId] || imageFunct(elements[keyss[elementId]]);
+                        image(imgArr[elementId], j * 100 + 50, i * 50 + 125, 100, 50);
+                    }
+                    textAlign(CENTER, CENTER);
+                    textSize(14);
+                    aText(i, j);
+                    textSize(14);
+                    fill(240, 240, 240);
+                    pushMatrix();
+                    translate(-1, -1);
+                    aText(i, j);
+                    translate(-2 * 0.5, 2 * 0.5);
+                    aText(i, j);
+                    translate(1, -2 * 0.5);
+                    aText(i, j);
+                    popMatrix();
+                    fill(0);
+                    aText(i, j);
+                    if (mouseX >= j * 100 + 50 && mouseX <= j * 100 + 150 && mouseY >= i * 50 + 125 && mouseY <= i * 50 + 175) {
+                        fill(255, 255, 255, 100);
+                        rect(j * 100 + 50, i * 50 + 125, 100, 50);
+                        fill(0);
+                        aText(i, j);
+                        if (mouseIsPressed && !keys.moused) {
+                            doFunct(elements[keyss[elementId]]);
+                        }
+                    }
+                    elementId++;
+                }
+            }
+        }
+        if (!mouseIsPressed && clicked) {
+            clicked = false;
+        }
+        textAlign(LEFT, LEFT);
+        noStroke();
+    }
+};
+var doFunct = function(w) {
+    if (width !== 400 || height !== 400) {
+        worldSize = 25;
+    }
+    world = generateBlankWorld();
+    world = produceCopyOf(w);
+};
+var imgFunct = function(level) {
+    var w = function(lvl) {
+        background(252, 252, 252);
+        var lvl = level;
+        for (var i = 0; i < lvl.length; i++) {
+            for (var j = 0; j < lvl[i].length; j++) {
+                if (lvl[i][j][0] !== 0) {
+                    fill(elements[lvl[i][j][0]][1]);
+                    rect(j * blockSize, i * blockSize, blockSize, blockSize);
+                }
+            }
+        }
+    };
+    return returnWithoutDraw(w, 0, 0, width, height);
+};
+var compareCells = function(CurrentLoc, direction) {};
+var shiftCells = function(CurrentLoc, direction) {};
+var megaNot = function(ky, list) {
+    var bool = true;
+    for (var i = 0; i < list.length; i++) {
+        if ((ky.toLowerCase()) === (list[i].toLowerCase())) {
+            bool = false;
+        }
+    }
+    return bool;
+};
+var nSq = function(pt, size, clr, t, rad) { //'nSquare'
+    fill(clr);
+    noStroke();
+    rect(pt[0], pt[1], size, size, rad);
+};
+var player = new PVector(16 * 4, 16 * 2);
+var pinc = new PVector(0, 0);
+var xfx = '',
+    upDown = 0;
+//Mini platformer from a previous program @WhatifyW
+var platformer = function(world, enemies) {
+    var e = function(w, p) {
+        if (w) {
+            //println((w[0][0]===0)+','+(w[1][0]===0)+'-'+p);
+            //println('['+(w[0])+']'+','+'['+(w[1])+']'+'-'+p);
+            var t = (w[0][0] === 0) || (w[1][0] === 0);
+            return t;
+        } else {
+            return false;
+        }
+    };
+    var ne = function(r, c) {
+        return (r > 0 && c > 0 && r < world.length && c < world[r].length) ? world[r][c] : false;
+    };
+    var ppy = [floor((player.y) / blockSize), floor((player.y + 16 + 2) / blockSize), floor((player.y + 8) / blockSize)];
+    var ppx = [floor((player.x) / blockSize), floor((player.x + 16) / blockSize), floor((player.x + 8) / blockSize)];
+    pinc = new PVector(keys[LEFT] && e([ne(ppy[0], ppx[1] - 1), ne(ppy[0], ppx[1] - 1)], 'LEFT') ? -2 : keys[RIGHT] && e([ne(ppy[0], ppx[0] + 1), ne(ppy[0], ppx[0] + 1)], 'RIGHT') ? 2 : 0, (keys[UP] && upDown < 15 && e([ne(ppy[1] - 1, ppx[0]), ne(ppy[1] - 1, ppx[1])], 'UP') ? -3 : 0));
+    //pinc =new PVector(keys[LEFT]&&e(world[floor(player.y/25)][floor(player.x/25)])?-2:keys[RIGHT]&&e(world[floor(player.y/25)][floor(player.x/25)+1])?2:0,(keys[UP]&&!(upDown>=15||!e(world[(floor(player.y+10)/25)][floor(player.x/25)]))?-3:0)); // Complex stuff is fun :-)
+    xfx = (e([ne(ppy[2] + 1, ppx[2]), ne(ppy[0] + 1, ppx[2])], 'MID')) && player.y < height - 16 && (player.y += 2);
+    //&& (e([ne(ppy[0]+1,ppx[0]),ne(ppy[0]+1,ppx[1])],'DOWN'))
+    player.add(pinc);
+    player.x = constrain(player.x, 0, width - 16);
+    player.y = constrain(player.y, 16, height - 16);
+    nSq([player.x, player.y], 14, color(173, 33, 33), -1, 0);
+    /*
+    stroke(36, 224, 180);//green
+    point(ppx[0]*blockSize,ppy[0]*blockSize);
+    stroke(222, 219, 37);//yellow
+    point(ppx[0]*blockSize,ppy[1]*blockSize);
+    stroke(78, 51, 232);//blue
+    point(ppx[1]*blockSize,ppy[0]*blockSize);
+    stroke(235, 84, 38);//red
+    point(ppx[1]*blockSize,ppy[1]*blockSize);
+    stroke(117, 83, 11);//brown
+    point(ppx[2]*blockSize,ppy[2]*blockSize);
+    */
+};
+var drawWorld = function() {
+    for (var i = 0; i < world.length; i++) {
+        for (var j = 0; j < world[i].length; j++) {
+            if (world[i][j][0] !== 0) {
+                var curName = elements[world[i][j][0]][0].toLowerCase();
+                fill(elements[world[i][j][0]][1]);
+                if (megaNot(curName, "player", "")) {
+                    rect(j * blockSize, i * blockSize, blockSize, blockSize);
+                }
+            }
+        }
+    }
+};
+/************************************/
+var setToEmpty = function(x, y) {
+    world[y][x] = [0, 20, true, -1];
+};
+/****updateWorld() will become simplified soon****/
+var updateWorld = function() {
+    var xfx;
+for (var a,g, b = 0; b < world.length; b++) {
+    for (var c = 0; c < world[b].length; c++) {
+        if (!world[b][c][2]) {
+            if (0 !== world[b][c][0]) {
+                for (var d = 0; d < elements[world[b][c][0]][7].length; d++) {
+                    a = Math.floor(random(0, 4));
+                    var e = elements[world[b][c][0]][7][d],
+                        f = random(0, 100) <= e[2],
+                        g = e[4];
+                   xfx= f && (0 === a && 0 < b && world[b - 1][c][0] === e[0] && (void 0 !== g ? (e[3] && (world[b - 1][c] = [e[1], g, !0]), world[b][c] = [e[1], g, !0]) : (e[3] && (world[b - 1][c] = [e[1], world[b - 1][c][1], !0]), world[b][c] = [e[1], world[b][c][1], !0])), 1 === a && b < worldSize - 1 && world[b + 1][c][0] === e[0] && (void 0 !== g ? (a[3] && (world[b + 1][c] = [e[1], g, !0]), world[b][c] = [e[1], g, !0]) : (a[3] && (world[b + 1][c] = [e[1], world[b + 1][c][1], !0]), world[b][c] = [e[1], world[b][c][1], !0])), 2 === a && 0 < c && world[b][c - 1][0] === e[0] && (void 0 !== g ? (a[3] && (world[b][c - 1] = [e[1], g, !0]), world[b][c] = [e[1], g, !0]) : (a[3] && (world[b][c - 1] = [e[1], world[b][c - 1][1], !0]), world[b][c] = [e[1], world[b][c][1], !0])), 3 === a && c < worldSize - 1 && world[b][c + 1][0] === e[0] && (void 0 !== g ? (a[3] && (world[b][c + 1] = [e[1], g, !0]), world[b][c] = [e[1], g, !0]) : (a[3] && (world[b][c + 1] = [e[1], world[b][c + 1][1], !0]), world[b][c] = [e[1], world[b][c][1], !0])));
+                }
+            }
+            xfx=1 === elements[world[b][c][0]][3] ? b < worldSize - 1 && (0 === world[b + 1][c][0] ? (world[b + 1][c] = world[b][c], world[b + 1][c][2] = !0, setToEmpty(c, b)) : elements[world[b + 1][c][0]][3] > elements[world[b][c][0]][3] ? (a = world[b + 1][c], world[b + 1][c] = world[b][c], world[b][c] = a, world[b][c][2] = !0, world[b + 1][c][2] = !0) : elements[world[b + 1][c][0]][3] <= elements[world[b][c][0]][3] && (0 < c && 0 === world[b + 1][c - 1][0] && 0.5 > random(0, 1) ? (world[b + 1][c - 1] = world[b][c], setToEmpty(c, b), world[b + 1][c - 1][2] = !0) : 0 < c && elements[world[b + 1][c - 1][0]][3] > elements[world[b][c][0]][3] && 0.5 > random(0, 1) ? (a = world[b + 1][c - 1], a[2] = !0, world[b + 1][c - 1] = world[b][c], 0 === world[b][c - 1][0] ? world[b][c - 1] = a : world[b][c] = a, world[b + 1][c - 1][2] = !0) : c < worldSize - 1 && 0 === world[b + 1][c + 1][0] && 0.5 > random(0, 1) ? (world[b + 1][c + 1] = world[b][c], setToEmpty(c, b), world[b + 1][c + 1][2] = !0) : c < worldSize - 1 && elements[world[b + 1][c + 1][0]][3] > elements[world[b][c][0]][3] && 0.5 > random(0, 1) && (a = world[b + 1][c + 1], a[2] = !0, world[b + 1][c + 1] = world[b][c], 0 === world[b][c + 1][0] ? world[b][c + 1] = a : world[b][c] = a, world[b + 1][c + 1][2] = !0))) : 2 === elements[world[b][c][0]][3] ? (b < worldSize - 1 && (0 === world[b + 1][c][0] ? (world[b + 1][c] = world[b][c], setToEmpty(c, b), world[b + 1][c][2] = !0) : elements[world[b + 1][c][0]][3] > elements[world[b][c][0]][3] && (a = world[b + 1][c], world[b + 1][c] = world[b][c], world[b][c] = a, world[b + 1][c][2] = !0, world[b][c][2] = !0)), 0 < c && 0 === world[b][c - 1][0] && 0.5 > random(0, 1) ? (world[b][c - 1] = world[b][c], setToEmpty(c, b), world[b][c - 1][2] = !0) : c < worldSize - 1 && 0 === world[b][c + 1][0] && 0.5 > random(0, 1) && (world[b][c + 1] = world[b][c], setToEmpty(c, b), world[b][c + 1][2] = !0)) : 3 === elements[world[b][c][0]][3] ? (a = Math.floor(random(0, 4)), 0 === a && b < worldSize - 1 && 0 === world[b + 1][c][0] && (world[b + 1][c] = world[b][c], setToEmpty(c, b), world[b + 1][c][2] = !0), 1 === a && 0 < b && 0 === world[b - 1][c][0] && (world[b - 1][c] = world[b][c], setToEmpty(c, b), world[b - 1][c][2] = !0), 2 === a && c < worldSize - 1 && 0 === world[b][c + 1][0] && (world[b][c + 1] = world[b][c], setToEmpty(c, b), world[b][c + 1][2] = !0), 3 === a && 0 < c && 0 === world[b][c - 1][0] && (world[b][c - 1] = world[b][c], setToEmpty(c, b), world[b][c - 1][2] = !0)) : 4 === elements[world[b][c][0]][3] && (0.01 < random(0, 1) ? (0 < b && 0 === world[b - 1][c][0] && (world[b - 1][c] = world[b][c], setToEmpty(c, b), world[b - 1][c][2] = !0), 0 < c && 0 === world[b][c - 1][0] && 0.2 > random(0, 1) && (world[b][c - 1] = world[b][c], setToEmpty(c, b), world[b][c - 1][2] = !0), c < worldSize - 1 && 0 === world[b][c + 1][0] && 0.2 > random(0, 1) && (world[b][c + 1] = world[b][c], setToEmpty(c, b), world[b][c + 1][2] = !0)) : setToEmpty(c, b));
+        }
+       xfx= 0 !== world[b][c][0] && (0 !== elements[world[b][c][0]][4].length && world[b][c][1] < elements[world[b][c][0]][4][1] ? (g = world[b][c][1], void 0 !== elements[world[b][c][0]][4][2] && (g = elements[world[b][c][0]][4][2]), world[b][c] = [elements[world[b][c][0]][4][0], g, !0]) : 0 !== elements[world[b][c][0]][5].length && world[b][c][1] > elements[world[b][c][0]][5][1] && (g = world[b][c][1], void 0 !== elements[world[b][c][0]][5][2] && (g = elements[world[b][c][0]][5][2]), world[b][c] = [elements[world[b][c][0]][5][0],g, !0]));
+        xfx= 0 !== world[b][c][0] && (0 < b && 0 !== world[b - 1][c][0] && (a = abs(world[b][c][1] - world[b - 1][c][1]) / 100, world[b][c][1] > world[b - 1][c][1] ? (world[b][c][1] -= a, world[b - 1][c][1] += a) : world[b][c][1] < world[b - 1][c][1] && (world[b][c][1] += a, world[b - 1][c][1] -= a)), b < worldSize - 1 && 0 !== world[b + 1][c][0] && (a = abs(world[b][c][1] - world[b + 1][c][1]) / 100, world[b][c][1] > world[b + 1][c][1] ? (world[b][c][1] -= a, world[b + 1][c][1] += a) : world[b][c][1] < world[b + 1][c][1] && (world[b][c][1] += a, world[b + 1][c][1] -= a)), 0 < c && 0 !== world[b][c - 1][0] && (a = abs(world[b][c - 1][1] - world[b][c][1]) / 100, world[b][c][1] > world[b][c - 1][1] ? (world[b][c][1] -= a, world[b][c - 1][1] += a) : world[b][c][1] < world[b][c - 1][1] && (world[b][c][1] += a, world[b][c - 1][1] -= a)), c < worldSize - 1 && 0 !== world[b][c + 1][0] && (a = abs(world[b][c][1] - world[b][c + 1][1]) / 100, world[b][c][1] > world[b][c + 1][1] ? (world[b][c][1] -= a, world[b][c + 1][1] += a) : world[b][c][1] < world[b][c + 1][1] && (world[b][c][1] += a, world[b][c + 1][1] -= a)));
+        xfx= 0 !== world[b][c] && (0 < world[b][c][3] && world[b][c][3]--, 0 === world[b][c][3] && setToEmpty(c, b));
+        if (0 !== world[b][c] && undefined !== world[b][c][4]) {
+            var h = defaultFireElement;
+            xfx = undefined !== elements[world[b][c][0]][8][4] && (h = elements[world[b][c][0]][8][4]);
+            xfx=world[b][c][4] === elements[world[b][c][0]][8][0] && random(0, 100) < elements[world[b][c][0]][8][3] && (0 < b && world[b - 1][c][0] === h && world[b][c][4]--, b < worldSize - 1 && world[b + 1][c][0] === h && world[b][c][4]--, 0 < c && world[b][c - 1][0] === h && world[b][c][4]--, c < worldSize - 1 && world[b][c + 1][0] === h && world[b][c][4]--);
+            if (0 < world[b][c][4] && world[b][c][4] !== elements[world[b][c][0]][8][0]) {
+                if (random(0, 1) < elements[world[b][c][0]][8][2]) {
+                    a = Math.floor(random(0, 4));
+                    var k = [h, elements[world[b][c][0]][8][1], !0, elements[h][7]];
+                    xfx=0 === a && 0 < b && 0 === world[b - 1][c][0] ? (world[b - 1][c] = k, world[b][c][4]--) : 1 === a && b < worldSize - 1 && 0 === world[b + 1][c][0] ? (world[b + 1][c] = k, world[b][c][4]--) : 2 === a && 0 < c && 0 === world[b][c - 1][0] ? (world[b][c - 1] = k, world[b][c][4]--) : 3 === a && c < worldSize - 1 && 0 === world[b][c + 1][0] && (world[b][c + 1] = k, world[b][c][4]--);
+                }
+            } else {
+                xfx =0 >= world[b][c][4] && setToEmpty(c, b);
+            }
+        }
+        world[b][c][2] = !1;
+    }
+}
+};
+/*START LEVELS SECTION**/
+var levels = {};
+var makeWLP = function() {
+    var x = [0, undefined, false, undefined, undefined, undefined, undefined, undefined];
+    var y = [0, 20, false, -1, undefined, undefined, undefined, undefined];
+    var z = [3, 20, false, -1, undefined, undefined, undefined, undefined];
+    var a = [17, 20, false, -1, undefined, undefined, undefined, undefined];
+    var b = [39, 20, false, -1, undefined, undefined, undefined, undefined];
+    var c = [18, 20, false, -1, undefined, undefined, undefined, undefined];
+    var d = [2, 20, false, -1, undefined, undefined, undefined, undefined];
+    var e = [35, 20, false, -1, undefined, undefined, undefined, undefined];
+    var f = [37, 20, false, -1, undefined, undefined, undefined, undefined];
+    var g = [25, 20, false, -1, 300, undefined, undefined, undefined];
+    var h = [15, 20, false, -1, undefined, undefined, undefined, undefined];
+    levels.whoLivesInAPineapple = [
+        [x, x, x, x, x, x, x, x, x, y, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, y, x, x, x, x, x, x, x, x, x, x, x, x, x, y, x],
+        [x, x, x, x, x, x, x, x, x, x, y, y, y, y, y, y, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, y, y, y, y, y, y, y, y, y, y, y, y, x, x, x, x, x],
+        [y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y, y],
+        [z, z, z, y, z, z, z, y, z, z, z, z, z, y, y, y, z, y, y, y, y, y, y, y, y],
+        [z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z],
+        [z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z, z],
+        [z, z, z, z, z, z, z, z, z, z, z, z, z, a, z, z, z, z, z, z, z, z, z, z, z],
+        [z, z, z, z, z, z, z, z, z, z, b, b, b, a, b, b, b, z, z, z, z, z, z, z, z],
+        [z, z, z, z, z, z, z, z, z, b, a, b, b, a, b, b, a, b, z, z, z, z, z, z, z],
+        [z, z, z, z, z, z, z, z, z, b, b, a, b, a, b, a, b, b, z, z, z, z, z, z, z],
+        [z, z, z, z, z, z, z, z, z, b, b, b, a, a, a, b, b, b, z, z, z, z, z, z, z],
+        [z, z, z, z, z, z, z, z, z, b, b, b, c, c, c, b, b, b, z, z, z, z, z, z, z],
+        [z, z, z, z, z, z, z, z, z, b, b, c, f, c, f, c, z, b, z, z, z, z, z, z, z],
+        [z, z, a, z, z, z, z, z, z, z, c, f, c, f, c, f, c, z, z, z, z, z, z, a, z],
+        [z, b, a, b, z, a, z, z, z, z, g, c, f, c, f, c, g, z, z, z, z, b, b, a, b],
+        [z, b, a, b, b, a, b, z, z, z, c, f, c, f, c, f, c, z, z, z, z, b, b, a, b],
+        [z, a, a, b, b, a, b, z, z, z, g, c, e, e, e, c, g, z, z, b, z, b, a, a, b],
+        [d, d, a, d, d, d, b, z, z, z, c, f, e, h, e, f, c, z, z, b, z, b, a, b, b],
+        [d, d, d, d, d, d, d, z, z, z, z, c, e, h, e, c, z, z, z, b, a, b, a, b, b],
+        [d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, z, z, d, d, d, b, a, b, d],
+        [d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, a, d, d],
+        [d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, a, d, d],
+        [d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d, d]
+    ];
+};
+var makeSSS = function() {
+    var x = [0, undefined, false, undefined, undefined, undefined, undefined, undefined];
+    var y = [0, 20, false, -1, undefined, undefined, undefined, undefined];
+    var z = [1, 20, false, -1, undefined, undefined, undefined, undefined];
+    var a = [39, 20, false, -1, undefined, undefined, undefined, undefined];
+    levels.sand = [
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, y, y, y, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, y, y, y, x, x, x, x, y, y, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, y, y, x, x, x, x, y, y, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, y, y, y, y, y, y, x, y, y, y, y, y, x, x, x, x, x, x, x, x],
+        [x, x, x, z, z, y, z, y, z, y, z, x, z, y, z, y, z, x, z, x, z, x, z, z, y],
+        [x, x, x, x, z, z, x, z, y, z, x, z, x, z, x, z, y, z, x, z, x, z, z, x, x],
+        [x, x, x, x, x, z, z, x, z, x, z, x, z, x, z, x, z, x, z, y, z, z, y, x, x],
+        [x, x, x, x, x, x, z, z, x, z, x, z, x, z, x, z, x, z, x, z, z, x, x, x, x],
+        [x, x, x, x, x, x, x, z, z, x, z, y, z, x, z, x, z, x, z, z, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, z, z, x, z, x, z, x, z, x, z, z, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, z, z, x, z, x, z, x, z, z, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, z, z, x, z, x, z, z, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, y, z, z, x, z, z, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, y, z, y, z, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, y, y, x, x, x, x, x, x, x, x, x, x, x],
+        [x, a, a, a, a, x, x, x, a, x, x, x, a, y, y, x, a, x, a, a, a, a, x, x, x],
+        [a, y, y, x, x, x, x, a, x, a, x, x, a, a, x, x, a, x, a, x, x, x, a, x, x],
+        [x, a, a, a, x, x, a, y, y, y, a, x, a, x, a, y, a, x, a, x, x, x, a, x, x],
+        [y, x, x, x, a, x, a, a, a, a, a, x, a, x, y, a, a, x, a, x, x, x, a, x, x],
+        [a, a, a, a, x, x, a, y, x, x, a, x, a, x, x, y, a, x, a, a, a, a, x, x, x],
+        [x, x, y, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, y, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, y, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x]
+    ];
+};
+var makeDistill = function() {
+    var x = [0, undefined, 0, undefined, undefined, undefined, undefined, undefined];
+    levels.distiller = [
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, [1, 192.82, 0, -1, undefined, undefined],
+            [1, 207.51, 0, -1, undefined, undefined],
+            [1, 227.51, 0, -1, undefined, undefined],
+            [1, 239.88, 0, -1, undefined, undefined],
+            [1, 244, 0, -1, undefined, undefined], x, [1, -273.15, 0, -1, undefined, undefined],
+            [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, [1, 162.35, 0, -1, undefined, undefined],
+            [1, 185.93, 0, -1, undefined, undefined],
+            [1, 209.51, 0, -1, undefined, undefined],
+            [1, 241.94, 0, -1, undefined, undefined],
+            [1, 253.03, 0, -1, undefined, undefined],
+            [1, 250.59, 0, -1, undefined, undefined],
+            [1, 239, 0, -1, undefined, undefined], x, [1, -273.15, 0, -1, undefined, undefined],
+            [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, [1, 133.02, 0, -1, undefined, undefined],
+            [1, 145.09, 0, -1, undefined, undefined], x, x, [37, 284.48, 0, -1, undefined, undefined],
+            [1, 280.6, 0, -1, undefined, undefined],
+            [1, 266.81, 0, -1, undefined, undefined], x, x, x, [1, -273.15, 0, -1, undefined, undefined],
+            [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, [1, 119.33, 0, -1, undefined, undefined],
+            [1, 124.75, 0, -1, undefined, undefined], x, x, [1, 369.15, 0, -1, undefined, undefined], x, [1, 317.82, 0, -1, undefined, undefined], x, x, [1, 264.75, 0, -1, undefined, undefined], x, x, [1, -273.15, 0, -1, undefined, undefined],
+            [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 114.44, 0, -1, undefined, undefined],
+            [1, 115.64, 0, -1, undefined, undefined], x, x, [1, 397.42, 0, -1, undefined, undefined],
+            [1, 382.4, 0, -1, undefined, undefined], x, x, x, x, [1, 290.46, 0, -1, undefined, undefined],
+            [1, 258.22, 0, -1, undefined, undefined], x, x, [1, -273.15, 0, -1, undefined, undefined],
+            [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 113.86, 0, -1, undefined, undefined],
+            [1, 114.16, 0, -1, undefined, undefined], x, [1, 414.32, 0, -1, undefined, undefined],
+            [1, 403.64, 0, -1, undefined, undefined],
+            [1, 388.86, 0, -1, undefined, undefined], x, x, x, x, [1, 308.87, 0, -1, undefined, undefined],
+            [1, 285.6, 0, -1, undefined, undefined],
+            [1, 258.19, 0, -1, undefined, undefined], x, x, [1, -273.15, 0, -1, undefined, undefined],
+            [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 113.43, 0, -1, undefined, undefined],
+            [1, 113.5, 0, -1, undefined, undefined], x, [1, 416.04, 0, -1, undefined, undefined],
+            [1, 407.36, 0, -1, undefined, undefined], x, x, x, x, x, [1, 321.49, 0, -1, undefined, undefined],
+            [1, 300.14, 0, -1, undefined, undefined],
+            [1, 259.93, 0, -1, undefined, undefined],
+            [1, 219.66, 0, -1, undefined, undefined], x, x, [1, -273.15, 0, -1, undefined, undefined],
+            [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 113.18, 0, -1, undefined, undefined],
+            [1, 113.2, 0, -1, undefined, undefined], x, [1, 418.04, 0, -1, undefined, undefined],
+            [1, 408.48, 0, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [1, 335.81, 0, -1, undefined, undefined],
+            [1, 328.83, 0, -1, undefined, undefined], x, [1, 184.49, 0, -1, undefined, undefined],
+            [1, 157.97, 0, -1, undefined, undefined], x, x, [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 113.06, 0, -1, undefined, undefined],
+            [1, 113.07, 0, -1, undefined, undefined], x, [1, 419.06, 0, -1, undefined, undefined],
+            [1, 412.1, 0, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [1, 351.53, 0, -1, undefined, undefined],
+            [1, 347.22, 0, -1, undefined, undefined], x, x, [1, 140.23, 0, -1, undefined, undefined],
+            [1, 131.58, 0, -1, undefined, undefined], x, [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 112.99, 0, -1, undefined, undefined],
+            [1, 112.99, 0, -1, undefined, undefined], x, [1, 418.52, 0, -1, undefined, undefined],
+            [1, 414.63, 0, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [1, 360.53, 0, -1, undefined, undefined],
+            [1, 357.95, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 112.92, 0, -1, undefined, undefined],
+            [1, 112.92, 0, -1, undefined, undefined], x, [1, 415.46, 0, -1, undefined, undefined],
+            [1, 413.06, 0, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [1, 364.11, 0, -1, undefined, undefined],
+            [1, 361.35, 0, -1, undefined, undefined], x, x, x, [1, -273.15, 0, -1, undefined, undefined], x, [1, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 112.82, 0, -1, undefined, undefined],
+            [1, 112.82, 0, -1, undefined, undefined], x, [1, 408.97, 0, -1, undefined, undefined],
+            [1, 407.7, 0, -1, undefined, undefined],
+            [11, 20, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [1, 359.9, 0, -1, undefined, undefined],
+            [1, 356.03, 0, -1, undefined, undefined], x, [15, -273.15, 1, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 112.68, 0, -1, undefined, undefined],
+            [1, 112.67, 0, -1, undefined, undefined], x, [1, 398.98, 0, -1, undefined, undefined],
+            [1, 398.13, 0, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [1, 345.76, 0, -1, undefined, undefined],
+            [1, 339.59, 0, -1, undefined, undefined], x, [15, -273.15, 1, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 112.48, 0, -1, undefined, undefined],
+            [1, 112.47, 0, -1, undefined, undefined], x, [1, 386.52, 0, -1, undefined, undefined],
+            [1, 385.35, 0, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [5, 120, 1, -1, undefined, undefined],
+            [1, 319.8, 0, -1, undefined, undefined],
+            [1, 309.26, 0, -1, undefined, undefined], x, [15, -273.15, 1, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 112.22, 0, -1, undefined, undefined],
+            [1, 112.22, 0, -1, undefined, undefined], x, [1, 373.42, 0, -1, undefined, undefined],
+            [1, 369.82, 0, -1, undefined, undefined],
+            [11, 358.98, 0, undefined, undefined, undefined],
+            [11, 349.57, 0, undefined, undefined, undefined],
+            [11, 340.68, 0, undefined, undefined, undefined],
+            [11, 326.64, 0, undefined, undefined, undefined],
+            [11, 306.43, 0, undefined, undefined, undefined],
+            [1, 284.08, 0, -1, undefined, undefined],
+            [1, 260.02, 0, -1, undefined, undefined], x, [15, -273.15, 1, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 111.92, 0, -1, undefined, undefined],
+            [1, 111.92, 0, -1, undefined, undefined], x, [1, 363.73, 0, -1, undefined, undefined],
+            [1, 360.8, 0, -1, undefined, undefined],
+            [1, 354.27, 0, -1, undefined, undefined],
+            [1, 345.44, 0, -1, undefined, undefined],
+            [1, 333.23, 0, -1, undefined, undefined],
+            [1, 314.3, 0, -1, undefined, undefined],
+            [1, 285.57, 0, -1, undefined, undefined],
+            [1, 243.44, 0, -1, undefined, undefined],
+            [1, 180.82, 0, -1, undefined, undefined], x, [15, -273.15, 0, -1, undefined, undefined],
+            [15, -273.15, 0, -1, undefined, undefined],
+            [15, -273.15, 0, -1, undefined, undefined],
+            [15, -273.15, 0, -1, undefined, undefined],
+            [15, -273.15, 0, -1, undefined, undefined],
+            [15, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 111.6, 0, -1, undefined, undefined],
+            [1, 111.6, 0, -1, undefined, undefined], x, [1, 358.61, 0, -1, undefined, undefined],
+            [1, 356.15, 0, -1, undefined, undefined],
+            [1, 350.85, 0, -1, undefined, undefined],
+            [1, 342.27, 0, -1, undefined, undefined],
+            [1, 328.69, 0, -1, undefined, undefined],
+            [1, 306.83, 0, -1, undefined, undefined],
+            [1, 272.23, 0, -1, undefined, undefined],
+            [1, 218.85, 0, -1, undefined, undefined],
+            [1, 155.63, 0, -1, undefined, undefined], x, [15, -273.15, 0, -1, undefined, undefined],
+            [4, -273.15, 0, undefined, undefined, undefined],
+            [4, -273.15, 0, undefined, undefined, undefined],
+            [8, -273.15, 0, undefined, undefined, undefined],
+            [9, -273.15, 0, -1, undefined, undefined],
+            [15, -273.15, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 110.93, 0, -1, undefined, undefined],
+            [1, 110.92, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, [1, 183.97, 0, -1, undefined, undefined],
+            [1, 172.96, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 110.38, 0, -1, undefined, undefined],
+            [1, 110.31, 0, -1, undefined, undefined],
+            [1, 110.12, 0, -1, undefined, undefined],
+            [1, 110.04, 0, -1, undefined, undefined], x, x, x, x, x, x, [1, 168.16, 0, -1, undefined, undefined],
+            [1, 166.29, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, [1, 110.13, 0, -1, undefined, undefined],
+            [1, 110.13, 0, -1, undefined, undefined],
+            [1, 110.15, 0, -1, undefined, undefined],
+            [1, 110.14, 0, -1, undefined, undefined], x, x, x, x, x, x, [1, 155.88, 0, -1, undefined, undefined],
+            [1, 155.6, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, [1, 110.49, 0, -1, undefined, undefined],
+            [1, 110.49, 0, -1, undefined, undefined], x, x, x, x, x, x, [1, 146.22, 0, -1, undefined, undefined],
+            [1, 146.21, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, [1, 111.14, 0, -1, undefined, undefined],
+            [1, 111.14, 0, -1, undefined, undefined], x, x, x, x, x, x, [1, 139.34, 0, -1, undefined, undefined],
+            [1, 139.36, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, [1, 112.09, 0, -1, undefined, undefined],
+            [1, 112.08, 0, -1, undefined, undefined], x, x, x, x, x, x, [1, 134.64, 0, -1, undefined, undefined],
+            [1, 134.66, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, [1, 113.31, 0, -1, undefined, undefined],
+            [1, 113.32, 0, -1, undefined, undefined], x, x, x, x, x, x, [1, 131.25, 0, -1, undefined, undefined],
+            [1, 131.28, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, [1, 114.76, 0, -1, undefined, undefined],
+            [1, 114.84, 0, -1, undefined, undefined], x, x, x, x, x, x, [1, 128.43, 0, -1, undefined, undefined],
+            [1, 128.55, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, [1, 116.25, 0, -1, undefined, undefined],
+            [1, 116.75, 0, -1, undefined, undefined],
+            [1, 117.95, 0, -1, undefined, undefined],
+            [1, 119.1, 0, -1, undefined, undefined],
+            [1, 120.27, 0, -1, undefined, undefined],
+            [1, 121.48, 0, -1, undefined, undefined],
+            [1, 122.75, 0, -1, undefined, undefined],
+            [1, 124.1, 0, -1, undefined, undefined],
+            [1, 125.63, 0, -1, undefined, undefined],
+            [1, 126.25, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, [1, 116.95, 0, -1, undefined, undefined],
+            [1, 117.38, 0, -1, undefined, undefined],
+            [1, 118.2, 0, -1, undefined, undefined],
+            [1, 119.2, 0, -1, undefined, undefined],
+            [1, 120.3, 0, -1, undefined, undefined],
+            [1, 121.46, 0, -1, undefined, undefined],
+            [1, 122.63, 0, -1, undefined, undefined],
+            [1, 123.76, 0, -1, undefined, undefined],
+            [1, 124.72, 0, -1, undefined, undefined],
+            [1, 125.23, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 24.1, 0, -1, undefined, undefined],
+            [1, 24.06, 0, -1, undefined, undefined],
+            [1, 24.01, 0, -1, undefined, undefined],
+            [1, 23.96, 0, -1, undefined, undefined],
+            [1, 23.93, 0, -1, undefined, undefined], x, [1, 27.42, 0, -1, undefined, undefined],
+            [1, 27.42, 0, -1, undefined, undefined],
+            [1, 27.45, 0, -1, undefined, undefined],
+            [1, 27.49, 0, -1, undefined, undefined],
+            [1, 27.51, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 24.22, 0, -1, undefined, undefined],
+            [1, 24.17, 0, -1, undefined, undefined],
+            [1, 24.05, 0, -1, undefined, undefined],
+            [1, 23.98, 0, -1, undefined, undefined],
+            [1, 23.94, 0, -1, undefined, undefined], x, [1, 27.42, 0, -1, undefined, undefined],
+            [1, 27.43, 0, -1, undefined, undefined],
+            [1, 27.46, 0, -1, undefined, undefined],
+            [1, 27.51, 0, -1, undefined, undefined],
+            [1, 27.53, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 24.48, 0, -1, undefined, undefined],
+            [1, 24.47, 0, -1, undefined, undefined], x, x, x, x, x, x, x, [1, 27.58, 0, -1, undefined, undefined],
+            [1, 27.58, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 24.81, 0, -1, undefined, undefined],
+            [1, 24.81, 0, -1, undefined, undefined], x, x, x, x, x, x, x, [1, 27.63, 0, -1, undefined, undefined],
+            [1, 27.63, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 25.17, 0, -1, undefined, undefined],
+            [1, 25.17, 0, -1, undefined, undefined], x, x, x, x, x, x, x, [1, 27.67, 0, -1, undefined, undefined],
+            [1, 27.67, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 25.56, 0, -1, undefined, undefined],
+            [1, 25.56, 0, -1, undefined, undefined], x, x, x, x, x, x, x, [1, 27.69, 0, -1, undefined, undefined],
+            [1, 27.69, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 25.95, 0, -1, undefined, undefined],
+            [1, 25.96, 0, -1, undefined, undefined], x, x, x, x, x, x, x, [1, 27.68, 0, -1, undefined, undefined],
+            [1, 27.69, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 26.31, 0, -1, undefined, undefined],
+            [1, 26.4, 0, -1, undefined, undefined],
+            [1, 26.62, 0, -1, undefined, undefined],
+            [1, 26.81, 0, -1, undefined, undefined],
+            [1, 26.97, 0, -1, undefined, undefined],
+            [1, 27.11, 0, -1, undefined, undefined],
+            [1, 27.23, 0, -1, undefined, undefined],
+            [1, 27.33, 0, -1, undefined, undefined],
+            [1, 27.5, 0, -1, undefined, undefined],
+            [1, 27.62, 0, -1, undefined, undefined],
+            [1, 27.67, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 26.47, 0, -1, undefined, undefined],
+            [1, 26.55, 0, -1, undefined, undefined],
+            [1, 26.68, 0, -1, undefined, undefined],
+            [1, 26.83, 0, -1, undefined, undefined],
+            [1, 26.98, 0, -1, undefined, undefined],
+            [1, 27.12, 0, -1, undefined, undefined],
+            [1, 27.24, 0, -1, undefined, undefined],
+            [1, 27.33, 0, -1, undefined, undefined],
+            [1, 27.49, 0, -1, undefined, undefined],
+            [1, 27.6, 0, -1, undefined, undefined],
+            [1, 27.66, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x]
+    ];
+}; //Submitted by Samuel @rusty39 
+var makeCC2 = function() {
+    var y = function(c) {
+        return z(c, 20, 0, -1);
+    };
+    var z = function(a, b, c, d) {
+        return [a, b, c, d, undefined, undefined, undefined, undefined];
+    };
+    levels.CC2 = [
+        [y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0)],
+        [y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0)],
+        [y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0), y(0)],
+        [y(3), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0)],
+        [y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [y(1), y(3), y(3), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [y(3), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0)],
+        [y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), z(1, 69.7, 0, -1), y(0), y(0), z(1, 69.78, 0, -1), y(0), y(0), z(1, 69.86, 0, -1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(1, 20.01, 0, -1), z(3, 20.01, 0, -1), y(3), y(1), y(0), y(0), y(1), y(0), y(0), z(18, 69.69, 0, -1), [24, 69.7, 0, -1, 50, undefined, undefined, undefined], z(39, 69.73, 0, -1), z(1, 69.76, 0, -1), z(39, 69.78, 0, -1), [24, 69.81, 0, -1, 50, undefined, undefined, undefined], z(18, 69.83, 0, -1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(3, 20.01, 0, -1), z(1, 20.01, 0, -1), y(1), y(0), y(1), y(1), y(0), z(1, 69.64, 0, -1), z(18, 69.64, 0, -1), [24, 69.66, 0, -1, 50, undefined, undefined, undefined], z(39, 69.68, 0, -1), z(1, 69.71, 0, -1), z(11, 69.74, 0, -1), z(1, 69.76, 0, -1), z(39, 69.79, 0, -1), [24, 69.81, 0, -1, 50, undefined, undefined, undefined], z(18, 69.82, 0, -1), z(1, 69.84, 0, -1), y(0), y(1), y(1), y(0), y(1), y(1), y(0)],
+        [z(1, 20.02, 0, -1), y(0), y(0), z(1, 20.02, 0, -1), y(0), y(0), y(1), y(0), [24, 69.61, 0, -1, 50, undefined, undefined, undefined], z(39, 69.63, 0, -1), z(11, 69.65, 0, -1), z(11, 69.68, 0, -1), z(11, 69.7, 0, -1), z(11, 69.73, 0, -1), z(11, 69.76, 0, -1), z(39, 69.78, 0, -1), [24, 69.79, 0, -1, 50, undefined, undefined, undefined], y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(1, 20.03, 0, -1), z(3, 20.03, 0, -1), z(3, 20.03, 0, -1), z(1, 20.02, 0, -1), y(0), y(0), y(1), y(0), z(39, 69.57, 0, -1), z(1, 69.58, 0, -1), z(11, 69.61, 0, undefined), z(11, 69.63, 0, -1), z(11, 69.66, 0, -1), z(11, 69.69, 0, -1), z(11, 69.72, 0, -1), z(1, 69.74, 0, -1), z(39, 69.75, 0, -1), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(3, 20.06, 0, -1), z(1, 20.04, 0, -1), z(1, 20.03, 0, -1), y(0), y(1), y(1), y(0), z(1, 69.51, 0, -1), z(1, 69.52, 0, -1), z(11, 69.54, 0, undefined), z(11, 69.56, 0, undefined), z(11, 69.59, 0, undefined), z(11, 69.62, 0, -1), z(11, 69.65, 0, -1), z(11, 69.67, 0, -1), z(11, 69.7, 0, -1), z(1, 69.71, 0, -1), z(1, 69.72, 0, -1), y(0), y(1), y(1), y(0), y(1), y(1), y(0)],
+        [z(1, 20.1, 0, -1), y(0), y(0), z(1, 20.09, 0, -1), y(0), y(0), y(1), y(0), z(39, 69.48, 0, -1), z(1, 69.49, 0, -1), z(11, 69.51, 0, undefined), z(11, 69.54, 0, undefined), z(11, 69.57, 0, undefined), z(11, 69.6, 0, -1), z(11, 69.63, 0, -1), z(1, 69.65, 0, -1), z(39, 69.66, 0, -1), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(1, 20.15, 0, -1), z(3, 20.14, 0, -1), z(3, 20.12, 0, -1), z(1, 20.1, 0, -1), y(0), y(0), y(1), y(0), [24, 69.44, 0, -1, 50, undefined, undefined, undefined], z(39, 69.45, 0, -1), z(11, 69.47, 0, undefined), z(11, 69.5, 0, undefined), z(11, 69.53, 0, undefined), z(11, 69.56, 0, undefined), z(11, 69.59, 0, -1), z(39, 69.61, 0, -1), [24, 69.63, 0, -1, 50, undefined, undefined, undefined], y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(3, 20.22, 0, -1), z(1, 20.16, 0, -1), z(1, 20.14, 0, -1), y(0), y(1), y(1), y(0), z(1, 69.38, 0, -1), z(18, 69.4, 0, -1), [24, 69.41, 0, -1, 50, undefined, undefined, undefined], z(39, 69.44, 0, -1), z(1, 69.47, 0, -1), z(11, 69.5, 0, undefined), z(1, 69.53, 0, -1), z(39, 69.56, 0, -1), [24, 69.58, 0, -1, 50, undefined, undefined, undefined], z(18, 69.6, 0, -1), z(1, 69.6, 0, -1), y(0), y(1), y(1), y(0), y(1), y(1), y(0)],
+        [z(1, 20.37, 0, -1), y(0), y(0), z(1, 20.45, 0, -1), y(0), y(0), y(1), y(0), y(0), z(18, 69.39, 0, -1), [24, 69.42, 0, -1, 50, undefined, undefined, undefined], z(39, 69.45, 0, -1), z(1, 69.47, 0, -1), z(39, 69.51, 0, -1), [24, 69.54, 0, -1, 50, undefined, undefined, undefined], z(18, 69.55, 0, -1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(1, 20.53, 0, -1), z(3, 20.53, 0, -1), z(3, 20.5, 0, -1), z(1, 20.47, 0, -1), y(0), y(0), y(1), y(0), y(0), z(1, 69.36, 0, -1), y(0), y(0), z(1, 69.46, 0, -1), y(0), y(0), z(1, 69.55, 0, -1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(3, 20.69, 0, -1), z(1, 20.58, 0, -1), z(1, 20.53, 0, -1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0)],
+        [z(1, 20.99, 0, -1), y(0), y(0), z(1, 21.35, 0, -1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(1, 21.3, 0, -1), z(3, 21.37, 0, -1), z(3, 21.37, 0, -1), z(1, 21.35, 0, -1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(3, 21.54, 0, -1), z(1, 21.43, 0, -1), z(1, 21.4, 0, -1), y(0), z(1, 20.01, 0, -1), z(1, 20.01, 0, -1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0), y(1), y(1), y(0)],
+        [z(1, 21.89, 0, -1), y(0), y(0), z(1, 22.67, 0, -1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(1, 22.21, 0, -1), z(3, 22.39, 0, -1), z(3, 22.51, 0, -1), z(1, 22.62, 0, -1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1), y(0), y(0), y(1)],
+        [z(3, 22.33, 0, -1), z(11, 22.42, 0, -1), z(11, 22.48, 0, -1), y(0), z(11, 35.3, 0, -1), z(11, 35.3, 0, -1), y(0), z(11, 52.48, 0, -1), z(11, 52.48, 0, -1), y(0), z(11, 53.42, 0, -1), z(11, 53.42, 0, -1), y(0), z(11, 56.81, 0, -1), z(11, 56.81, 0, -1), y(0), z(11, 56.81, 0, -1), z(11, 56.81, 0, -1), y(0), z(11, 54.11, 0, -1), z(11, 54.11, 0, -1), y(0), z(11, 54.11, 0, -1), z(11, 54.11, 0, -1), y(0)]
+    ];
+};
+var makeNoName = function() {
+    var x = [0, undefined, 0, undefined, undefined, undefined, undefined, undefined];
+    levels.NoName = [
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x],
+        [x, x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x
+        ],
+        [x, x, x, [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined], x, x, x
+        ],
+        [
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined]
+        ],
+        [x, [1, 20, 0, -1, undefined, undefined], x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, [1, 20, 0, -1, undefined, undefined], x],
+        [x, x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x
+        ],
+        [x, x, x, [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined], x, [1, 55.88, 0, -1, undefined, undefined],
+            [1, 56.7, 0, -1, undefined, undefined],
+            [1, 58.29, 0, -1, undefined, undefined],
+            [1, 60.54, 0, -1, undefined, undefined], x, x, x, [1, 93.06, 0, -1, undefined, undefined],
+            [1, 93.81, 0, -1, undefined, undefined],
+            [1, 94.28, 0, -1, undefined, undefined],
+            [1, 94.5, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined], x, x, x
+        ],
+        [
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 63.38, 0, -1, undefined, undefined], x, x, x, [1, 91.97, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined]
+        ],
+        [x, [1, 20, 0, -1, undefined, undefined], x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 66.62, 0, -1, undefined, undefined], x, x, x, [1, 90.51, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, [1, 20, 0, -1, undefined, undefined], x],
+        [x, x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 70.12, 0, -1, undefined, undefined], x, x, x, [1, 88.64, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x
+        ],
+        [x, x, x, [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 73.73, 0, -1, undefined, undefined],
+            [1, 77.28, 0, -1, undefined, undefined],
+            [1, 80.64, 0, -1, undefined, undefined],
+            [1, 83.7, 0, -1, undefined, undefined],
+            [1, 86.36, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined], x, x, x
+        ],
+        [
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, [1, 20, 0, -1, undefined, undefined]
+        ],
+        [x, [1, 20, 0, -1, undefined, undefined], x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, x, x, x, x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, [1, 20, 0, -1, undefined, undefined], x],
+        [x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, [1, 20, 0, -1, undefined, undefined], x, x
+        ],
+        [x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, [1, 20, 0, -1, undefined, undefined], x, x, x],
+        [x, x, x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x, x, [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined], x, x, x, x, x
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined],
+            [1, 20, 0, -1, undefined, undefined]
+        ],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x]
+    ];
+}; //Submitted by Brains @MesaJarJarBinks
+var makeArio = function() {
+    var levelname = 'Ario';
+    var x = [0, undefined, 0, undefined, undefined, undefined, undefined, undefined];
+    var sq = [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x];
+    var y = [33, 20, 0, -1, undefined, undefined];
+    var z = [24, 20, 0, -1, 50, undefined];
+    var a = [2, 20, 0, -1, undefined, undefined];
+    var b = [15, 20, 0, -1, undefined, undefined];
+    var c = [39, 20, 0, -1, undefined, undefined];
+    var d = [13, 20, 0, -1, undefined, undefined];
+    var e = [18, 20, 0, -1, undefined, undefined];
+    levels[levelname] = [sq, sq, [x, x, x, x, x, x, x, x, x, y, y, y, y, y, x, x, x, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, y, y, y, y, y, y, y, y, y, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, z, z, z, a, a, z, a, b, b, b, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, z, a, z, a, a, a, z, a, a, a, b, b, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, z, a, z, z, a, a, a, z, a, a, a, b, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, z, z, a, a, a, a, z, z, z, z, b, b, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, b, a, a, a, a, a, a, a, b, b, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, x, y, y, c, y, y, y, y, b, b, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, y, y, y, c, y, y, c, y, y, y, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, y, y, y, y, c, c, c, c, y, y, y, y, x, x, x, x, x, x, x],
+        [x, x, x, x, x, b, d, d, y, c, e, c, c, e, c, y, d, d, b, x, x, x, x, x, x],
+        [x, x, x, x, x, b, d, d, d, c, c, c, c, c, c, d, d, d, b, x, x, x, x, x, x],
+        [x, x, x, x, x, b, d, d, c, c, c, c, c, c, c, c, d, d, b, x, x, x, x, x, x],
+        [x, x, x, x, x, b, b, b, c, c, c, x, x, c, c, c, b, b, b, x, x, x, x, x, x],
+        [x, x, x, x, x, x, x, z, z, z, x, x, x, x, z, z, z, x, x, x, x, x, x, x, x],
+        [x, x, x, x, x, x, z, z, z, z, x, x, x, x, z, z, z, z, x, x, x, x, x, x, x], sq, sq, sq, sq, sq, sq, sq
+    ];
+};
+var makeForge = function() {
+    var x = [0, undefined, 0, undefined, undefined];
+    var sq = [x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x];
+    var c = [39, 20, 0, -1, undefined, undefined];
+    levels.forge = [sq, [x, x, x, x, c, c, x, c, c, c, c, c, x, c, x, x, c, x, x, c, c, c, x, c, c],
+        [x, x, x, c, x, x, x, x, x, c, x, x, x, c, x, x, c, x, x, c, x, x, x, c, [0, 20, 0, -1, undefined]],
+        [x, x, x, x, c, c, x, x, x, c, x, x, x, c, x, x, c, x, x, c, c, c, x, c, c],
+        [x, x, x, x, x, x, c, x, x, c, x, x, x, x, c, c, x, x, x, c, x, x, x, c, x],
+        [x, x, x, x, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c],
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq,
+        sq
+    ];
+};
+makeWLP();
+makeSSS();
+makeCC2();
+makeDistill();
+makeNoName();
+makeArio();
+makeForge();
+var superTmp = {};
+var levelSelect = false;
+/**/
+var keyPressed = function() {
+    keys[keyCode] = true;
+    switch (key.toString()) {
+        case 'e':
+            levelSelect = false;
+            elementsOpened = !elementsOpened;
+            break;
+        case 'm':
+            elementsOpened = false;
+            levelSelect = !levelSelect;
+            break;
+        case '1':
+            tool = 0;
+            break;
+        case '2':
+            tool = 1;
+            break;
+        case '3':
+            tool = 2;
+            break;
+        case 'q':
+            Program.restart();
+            break;
+        case 'r':
+            println(Array(3)
+                .join('\n') + "" + getInOrder3(world) + ";\n}");
+            break;
+        case 'a':
+            levels.temp = world;
+            levels.temp.e = worldSize;
+            break;
+        case 'l':
+            if (superTmp.saved.e !== undefined) {
+                worldSize = superTmp.saved.e;
+                world = generateBlankWorld();
+                world = produceCopyOf(superTmp.saved);
+            }
+            break;
+        case 'p':
+            paused = !paused;
+            if (paused) {
+                enableContextMenu();
+                textSize(20);
+                textAlign(CENTER);
+                langText("Paused", width / 3, height / 3, 100, 100);
+                textAlign(LEFT);
+            } else {
+                disableContextMenu();
+            }
+            break;
+    }
+    if (keyCode === 27) {
+        Status = "Menu";
+    }
+};
+var keyReleased = function() {
+    keys[keyCode] = false;
+    if (!keys[UP]) {
+        upDown = 0;
+    }
+};
+world = generateBlankWorld();
+/**DRAW FUNCTION TO DRAW GAME*/
+var pitch = 0;
+var yaw = 0;
+var sineAng = 0;
+var snap;
+var fancy = !1;
+draw = function() {
+    if (fancy) {
+        smooth();
+    }
+    background(247, 247, 247);
+    if (!snap) {
+        //Background based on a program by Camon L
+        var SIZE = 3.3;
+        for (var x = 0; x < floor(width / SIZE) * SIZE; x += SIZE * 3) {
+            for (var y = 0; y < floor(height / SIZE) * SIZE; y += SIZE * 3) {
+                var clr = color(cos(x * y * 5) * 205, cos(y * x * 3) * 255, sin(x * y * 2) * 255, 180);
+                fill(clr);
+                noStroke();
+                xfx = (blue(clr) > 255 / 2) ? (rect(x, y, SIZE * 2, SIZE * 2)) : (rect(SIZE / 2 + x, SIZE / 2 + y, SIZE, SIZE));
+            }
+        }
+        fill(255, 255, 255, 200);
+        rect(0, 0, width, height);
+        snap = get(0, 0, width, height);
+    } else {
+        image(snap, 0, 0, width, height);
+    }
+    resetMatrix();
+    frameRate(20);
+    noStroke();
+    resetMatrix();
+    if (Status === "Menu" || Status === "Menu") {
+        textSize(mapScale(50, [0, 400]));
+        Button(203, 94, 0, 0, "Ultracraft", 50);
+        textSize(mapScale(30, [0, 800]));
+        ///Button(200, 131, 0, 0, "Unofficial Edition", 50);
+        textSize(mapScale(20, [0, 400]));
+        Button(200, 194, 150, 50, "Play", 60);
+        Button(200, 247, 150, 38, "How to Play", 60);
+        textSize(mapScale(15, [0, 400]));
+        Button(200, 326, 107, 35, "Options", 60);
+        sineAng++;
+        pushMatrix();
+        translate(width * 7 / 8 * cos(30), -160 / mapScale(1, [0, 400]) * sin(30));
+        rotate(15);
+        textSize(mapScale((sin(sineAng * 15) * 3 + 20) - (35 - 20) / 2, [0, 400]));
+        fill(255, 0, 0);
+        langText("Now accepting levels from 'justpaste.it'!\n Post link in tips & thanks! :)", 0, 140);
+        textSize(20);
+        popMatrix();
+        if (sineAng > 360 * 2 && sineAng % 15 === 0) {
+            sineAng = 0;
+        }
+    }
+    if (Status === "Play") {
+        resetMatrix();
+        rectMode(LEFT);
+        textAlign(CENTER);
+        background(235, 235, 235);
+        var x = constrain(Math.floor(mouseX / blockSize), 0, worldSize - 1); //for loaded worlds, 'worldSize-1' prevents glitches
+        var y = constrain(Math.floor(mouseY / blockSize), 0, worldSize - 1);
+        if (mouseIsPressed && !(elementsOpened) && !(levelSelect)) {
+            if (mouseButton === LEFT) {
+                switch (tool) {
+                    case 0:
+                        var curName = elements[selectedElement][0].toLowerCase();
+                        if (world[y][x][0] === 0) {
+                            if (curName !== 'player') {
+                                world[y][x] = [selectedElement, elements[selectedElement][2], true, elements[selectedElement][6]];
+                                if (elements[selectedElement][8] !== undefined) {
+                                    world[y][x][4] = elements[selectedElement][8][0];
+                                }
+                            } else {
+                                player = new PVector(mouseX, mouseY);
+                            }
+                        }
+                        break;
+                    case 1:
+                        if (world[y][x][0] !== 0) {
+                            world[y][x][1] += 20;
+                        }
+                        break;
+                    case 2:
+                        if (world[y][x][0] !== 0) {
+                            world[y][x][1] -= 20;
+                            if (world[y][x][1] < -273.15) {
+                                world[y][x][1] = -273.15;
+                            }
+                        }
+                        break;
+                }
+            } else if (mouseButton === RIGHT) {
+                if (elements[world[y][x][0]][0] === "Water") {
+                    playSound(getSound("rpg/water-bubble"));
+                }
+                if (trueIfAny(elements[world[y][x][0]][0], ["Gold", "Tin", "Iron", "Copper", "Bronze"], "match")) {
+                    playSound(getSound("rpg/metal-clink"));
+                }
+                setToEmpty(x, y);
+            }
+        }
+        textSize(12);
+        fill(4, 174, 189);
+        langText("\'Esc\' to return to menu,\t\'p\' to pause\n\'m\' to change levels\t, \'e\' to change elements", 0, height - 40, width, height);
+        drawWorld();
+        if (!paused) {
+            updateWorld();
+            platformer(world);
+        }
+        noFill();
+        stroke(toolColors[tool]);
+        strokeWeight(1);
+        rect(x * blockSize, y * blockSize, blockSize - 1, blockSize - 1);
+        fill(0, 0, 255, 50);
+        stroke(0, 0, 255, 50);
+        strokeWeight(5);
+        rect(0, 0, 400, 35);
+        noStroke();
+        if (paused) {
+            rect(370, 5, 10, 25);
+            rect(385, 5, 10, 25);
+        } else {
+            arrow1(370, 5, 25, 25);
+        }
+        xfx = fill(255, 0, 0);
+        xfx = (textSize(12) || true) && (textAlign(LEFT, TOP));
+        textSize(12);
+        textAlign(LEFT, TOP);
+        xfx = (world[y][x][0] !== 0) ? (langText("Element: " + elements[world[y][x][0]][0] + Array(10)
+            .join(" ") + "Temperature: " + world[y][x][1].toFixed(2) + "°C", 20, 2)) : (langText("[Selected Space is Empty]", 20, 2));
+        var str = "Tool: " + toolNames[tool];
+        xfx = (tool === 0) && (textSize(12) || true) && (textAlign(LEFT, BOTTOM) || true) && (fill(30, 0, 255) || !0) && (str += Array(10)
+            .join(" ") + "Selected: " + elements[selectedElement][0]);
+        textAlign(LEFT, BOTTOM);
+        textSize(12);
+        langText(str, 20, 30);
+        
+        menu(levelSelect, levels, doFunct, imgFunct);
+        var doFunct2= function(id){selectedElement = elements.indexOf(id);};
+        menu(elementsOpened, elements, doFunct2, false);
+        
+        //selectedElement
+        resetMatrix();
+    }
+    if (Status === "How to Play") {
+        background(204, 204, 204);
+        textSize(mapScale(20, [0, 400]));
+        Button(196, 50, 150, 38, "Menu", 60);
+        textAlign(CENTER, TOP);
+        fill(0, 122, 24);
+        langText("How to play:\n¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯", width / 2, width / 3 - 40);
+        textSize(mapScale(14, [0, 400]));
+        textAlign(LEFT);
+        langText("\n•Press 'E' to show block changing menu.\n•Press 'M' to show level changing menu\n•Press 'R' for experimental save feature \n•Press 'P' to pause game\n•Press keys 1, 2, and 3 to switch tools:", 10 + width / 20, width / 3);
+        fill(255, 0, 0);
+        langText("Press 1: Element Maker\nPress 2: Heater\nPress 3: Cooler\nYou can also return to the options menu with ESCAPE", mapScale(20, [0, 400]) + width / 20, width / 3 + mapScale(90, [0, 400]), width - mapScale(20, [0, 400]), mapScale(100, [0, 400]));
+        fill(255 - 204, 255 - 204, 255 - 204);
+    }
+    if (Status === "Options") {
+        background(204, 204, 204);
+        Button(196, 50, 150, 38, "Menu", 60);
+        textAlign(CENTER);
+        fill(255, 122, 24);
+        langText("Work In Progress\nSee Code For \"Large Screen Mode\"", width / 2, width / 3 - 25);
+        textAlign(LEFT);
+        var drawCube = function(radius, shift) {
+            var TopX, TopY, BotX, BotY;
+            var nLine = function(gPoint1, gPoint2, color) {
+                stroke(color);
+                strokeWeight(2);
+                line(gPoint1[0], gPoint1[1], gPoint2[0], gPoint2[1]);
+            };
+            var colorArr = [color(255, 0, 0), color(255, 125, 0), color(255, 204, 0), color(255, 255, 0), color(155, 255, 0), color(155, 204, 0)];
+            TopX = [0];
+            TopY = [0];
+            BotX = [0];
+            BotY = [0]; //clear
+            var Vpitch = pitch,
+                Vradius = radius,
+                Vyaw = yaw;
+            //Necessary repetition- prevents errors
+            var BOT = -1;
+            var TOP = 1;
+            var sin1 = function(angle) {
+                return sin(Vyaw + angle) * Vradius;
+            };
+            var cos1 = function(angle) {
+                return cos(Vyaw + angle) * Vradius;
+            };
+            var cosA = function(angle, dir) {
+                return cos1(angle) * sin(Vpitch) + (dir) * ((cos(Vpitch) * sqrt(Vradius * Vradius * 2)) / 2);
+            };
+            for (var angle = 0; angle <= 270; angle += 90) {
+                TopX.push(sin1(angle) + shift);
+                TopY.push(cosA(angle, TOP) + shift);
+                BotX.push(sin1(angle) + shift);
+                BotY.push(cosA(angle, BOT) + shift);
+            }
+            for (var n = 2; n <= 4; n++) {
+                nLine([TopX[n - 1], TopY[n - 1]], [TopX[n], TopY[n]], colorArr[n - 1]);
+            }
+            nLine([TopX[4], TopY[4]], [TopX[1], TopY[1]], colorArr[0]);
+            for (var n = 1; n <= 4; n++) {
+                nLine([BotX[n], BotY[n]], [TopX[n], TopY[n]], colorArr[n - 1]);
+            }
+            for (var n = 2; n <= 4; n++) {
+                nLine([BotX[n - 1], BotY[n - 1]], [BotX[n], BotY[n]], colorArr[8 - n]);
+            }
+            nLine([BotX[4], BotY[4]], [BotX[1], BotY[1]], colorArr[0]);
+        };
+        drawCube(mapScale(40, [0, 400]), mapScale(200, [0, 400]));
+        pitch += 1;
+        yaw += 1;
+    }
+};
+smooth();
