@@ -1,0 +1,94 @@
+var drawNum = function(x, y) {
+    beginShape();
+    vertex(x - 30, y);
+    vertex(x - 25, y - 5);
+    vertex(x + 25, y - 5);
+    vertex(x + 30, y);
+    vertex(x + 25, y + 5);
+    vertex(x - 25, y + 5);
+    endShape();
+};
+var clockNum = function(x, y, number) {
+    if((number >= 2 && number <= 6) || number >= 8) {
+        fill(115, 237, 45);
+    } else {
+        fill(255, 255, 255);
+    }
+    drawNum(x, y);
+    if(number === 0 || number === 2 || number === 3 || number === 5 || number >= 6) {
+        fill(115, 237, 45);
+    } else {
+        fill(255, 255, 255);
+    }
+    drawNum(x, y - 60);
+    if(number === 0 || number === 2 || number === 3 || number === 5 || number === 6 || number >= 8) {
+        fill(115, 237, 45);
+    } else {
+        fill(255, 255, 255);
+    }
+    drawNum(x, y + 60);
+    pushMatrix();
+    translate(x, y);
+    rotate(90);
+    if(number === 0 || number === 1 || number === 2 || number === 3 || number === 4 || number === 7 || number === 8 || number === 9) {
+        fill(115, 237, 45);
+    } else {
+        fill(255, 255, 255);
+    }
+    drawNum(-30, -30);
+    //TOP LEFT
+    if(number === 0 || number === 4 || number === 5 || number === 6 || number >= 8) {
+        fill(115, 237, 45);
+    } else {
+        fill(207, 207, 207);
+    }
+    drawNum(-30, 30);
+    if(number === 0 || number === 2 || number === 6 || number === 8) {
+        fill(115, 237, 45);
+    } else {
+        fill(255, 255, 255);
+    }
+    drawNum(30, 30);
+    if(number === 0 || number === 1 || number >= 3) {
+        fill(115, 237, 45);
+    } else {
+        fill(255, 255, 255);
+    }
+    drawNum(30, -30);
+    popMatrix();
+};
+var draw = function() {
+    textAlign(CENTER, CENTER);
+    textSize(100);
+    noStroke();
+    background(207, 207, 207);
+    fill(0, 0, 0);
+    ellipse(314,153,50,50);
+    rect(302,78,1,100);
+    rect(324,78,1,100);
+    ellipse(302,80,15,15);
+    ellipse(326,80,15,15);
+    rect(0,149,400,120,20);
+    fill(133, 92, 63);
+    rect(0,269,400,20);
+    rect(38,287,329,150);
+    noFill();
+    stroke(0, 0, 0);
+    rect(74,287,250,50);
+    rect(74,346,250,50);
+    fill(0, 0, 0);
+    rect(146,299,100,25);
+    rect(146,358,100,25);
+    scale(0.5);
+    translate(113, height / 0.95);
+    clockNum(40, 0, floor(hour() % 12 / 10));
+    clockNum(120, 0, floor(hour() % 12 % 10));
+    fill(115, 237, 45);
+    text(":", 180, 0);
+    clockNum(240, 0, floor(minute() / 10));
+    clockNum(320, 0, floor(minute() % 10));
+    text(":", 380, 0);
+    clockNum(440, 0, floor(second() / 10));
+    clockNum(520, 0, floor(second() % 10));
+    resetMatrix();
+};
